@@ -1,1 +1,92 @@
 
+const Post = require('../models/postModel');
+
+// Get all posts
+exports.getAllPosts = (req, res) => {
+    Post.getAllPosts((err, results) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.json(results);
+    });
+};
+
+// Get single post by ID
+exports.getPostById = (req, res) => {
+    Post.getPostById(req.params.id, (err, result) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.json(result);
+    });
+};
+
+// Create new post
+exports.createPost = (req, res) => {
+    const newPost = req.body;
+    Post.createPost(newPost, (err, result) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.send('Post added...');
+    });
+};
+
+// Update existing post
+exports.updatePost = (req, res) => {
+    const updatedPost = req.body;
+    Post.updatePost(req.params.id, updatedPost, (err, result) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.send('Post updated...');
+    });
+};
+
+// Delete a post
+exports.deletePost = (req, res) => {
+    Post.deletePost(req.params.id, (err, result) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        res.send('Post deleted...');
+    });
+};
+
+
+routes.js
+
+const express = require('express');
+const router = express.Router();
+const postController = require('../controllers/postController');
+
+// Routes
+router.get('/', postController.getAllPosts);
+router.get('/:id', postController.getPostById);
+router.post('/', postController.createPost);
+router.put('/:id', postController.updatePost);
+router.delete('/:id', postController.deletePost);
+
+module.exports = router;
+
+
+app.js 
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const postRoutes = require('./routes/postRoutes');
+
+const app = express();
+
+// Middleware
+app.use(bodyParser.json());
+
+// Post routes
+app.use('/api/posts', postRoutes);
+
+// Start the server
+app.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
+
+
