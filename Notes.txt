@@ -367,3 +367,55 @@ export default HomePage;
     </div>
   </div>
 </section>
+{/* Footer Section */}
+<footer className="footer bg-dark text-white py-5">
+  <div className="container">
+    <div className="row">
+
+      {/* Footer Column 1: Company Info */}
+      <div className="col-md-4 col-sm-6 mb-4">
+        <h5>Company Name</h5>
+        <p>
+          A brief description of the company goes here. It might talk about your vision, mission, or some background information that users may find useful.
+        </p>
+      </div>
+
+      {/* Footer Column 2: Quick Links */}
+      <div className="col-md-4 col-sm-6 mb-4">
+        <h5>Quick Links</h5>
+        <ul className="list-unstyled">
+          <li><a href="#home" className="text-white">Home</a></li>
+          <li><a href="#services" className="text-white">Services</a></li>
+          <li><a href="#about" className="text-white">About Us</a></li>
+          <li><a href="#contact" className="text-white">Contact Us</a></li>
+        </ul>
+      </div>
+
+      {/* Footer Column 3: Contact Info */}
+      <div className="col-md-4 col-sm-6 mb-4">
+        <h5>Contact Us</h5>
+        <p><i className="fas fa-phone-alt"></i> +123-456-7890</p>
+        <p><i className="fas fa-envelope"></i> info@company.com</p>
+        <p><i className="fas fa-map-marker-alt"></i> 123 Street, City, Country</p>
+      </div>
+
+    </div>
+
+    {/* Social Media Links */}
+    <div className="row mt-4">
+      <div className="col text-center">
+        <a href="#" className="text-white mx-2"><i className="fab fa-facebook-f"></i></a>
+        <a href="#" className="text-white mx-2"><i className="fab fa-twitter"></i></a>
+        <a href="#" className="text-white mx-2"><i className="fab fa-instagram"></i></a>
+        <a href="#" className="text-white mx-2"><i className="fab fa-linkedin"></i></a>
+      </div>
+    </div>
+
+    {/* Copyright Info */}
+    <div className="row mt-4">
+      <div className="col text-center">
+        <p className="mb-0">&copy; 2024 Company Name. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</footer>
