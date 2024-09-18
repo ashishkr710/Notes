@@ -22,6 +22,8 @@ exports.getPostById = (req, res) => {
 };
 
 // Create new post
+
+
 exports.createPost = (req, res) => {
     const newPost = req.body;
     Post.createPost(newPost, (err, result) => {
@@ -241,4 +243,26 @@ const HomePage = () => {
 export default HomePage;
 
 
+{/* Hero Section */}
+<section
+  className="hero py-5 text-center"
+  style={{
+    backgroundImage: "url('your_background_image_url')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    color: "white"
+  }}
+>
+  <div className="container">
+    <h1 className="display-4">We Create Applications With Excellent Technology</h1>
+    <p className="lead">
+      It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
+    </p>
+    <button className="btn btn-primary btn-lg m-2">Download Now</button>
+    <button className="btn btn-outline-light btn-lg m-2">Explore More</button>
+    {/* Add a sample image */}
+    <img src="your_image_url_here" alt="App Showcase" className="img-fluid mt-4" />
+  </div>
+</section>
 
