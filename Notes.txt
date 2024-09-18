@@ -90,3 +90,155 @@ app.listen(3000, () => {
 });
 
 
+
+Lending Pages - import React from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+
+const HomePage = () => {
+  return (
+    <div>
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-lg navbar-light bg-light">
+        <div className="container">
+          <a className="navbar-brand" href="#home">
+            Apps Market
+          </a>
+          <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav ms-auto">
+              <li className="nav-item">
+                <a className="nav-link" href="#services">
+                  Services
+                </a>
+              </li>
+              <li className="nav-item">
+                <a className="nav-link" href="#why-us">
+                  Why Us
+                </a>
+              </li>
+              <li className="nav-item">
+                <a className="nav-link" href="#contact">
+                  Contact
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="hero py-5 text-center">
+        <div className="container">
+          <h1 className="display-4">We Create Applications With Excellent Technology</h1>
+          <p className="lead">
+            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
+          </p>
+          <button className="btn btn-primary btn-lg m-2">Download Now</button>
+          <button className="btn btn-outline-primary btn-lg m-2">Explore More</button>
+          {/* Add a sample image */}
+          <img src="your_image_url_here" alt="App Showcase" className="img-fluid mt-4" />
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-5 bg-light">
+        <div className="container">
+          <h2 className="text-center">We provide various kinds of services for you</h2>
+          <div className="row text-center mt-4">
+            <div className="col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <img src="unique_ui_image_url" alt="Unique App UI" className="img-fluid" />
+                  <h5 className="card-title">Unique App UI</h5>
+                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <img src="dashboard_image_url" alt="Excellent Dashboard" className="img-fluid" />
+                  <h5 className="card-title">Excellent Dashboard</h5>
+                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <img src="construction_image_url" alt="By Construction" className="img-fluid" />
+                  <h5 className="card-title">By Construction</h5>
+                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Us Section */}
+      <section id="why-us" className="py-5">
+        <div className="container">
+          <h2 className="text-center">Why Us</h2>
+          <p className="text-center">
+            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
+          </p>
+        </div>
+      </section>
+
+      {/* Portfolio Section */}
+      <section id="portfolio" className="py-5 bg-light">
+        <div className="container">
+          <h2 className="text-center">Our Portfolio</h2>
+          <div className="row text-center mt-4">
+            <div className="col-md-4">
+              <img src="portfolio_image_1_url" alt="Portfolio 1" className="img-fluid" />
+              <p>Welcome</p>
+            </div>
+            <div className="col-md-4">
+              <img src="portfolio_image_2_url" alt="Portfolio 2" className="img-fluid" />
+              <p>Choose Your Plan</p>
+            </div>
+            <div className="col-md-4">
+              <img src="portfolio_image_3_url" alt="Portfolio 3" className="img-fluid" />
+              <p>Let's Start Your Trip</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-4 bg-dark text-white">
+        <div className="container text-center">
+          <div className="row">
+            <div className="col-md-6">
+              <p>&copy; 2024 Pixbey. All Rights Reserved.</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="list-inline">
+                <li className="list-inline-item"><a href="#!" className="text-white">Home</a></li>
+                <li className="list-inline-item"><a href="#!" className="text-white">Pricing</a></li>
+                <li className="list-inline-item"><a href="#!" className="text-white">Download</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default HomePage;
+
+
+
