@@ -307,3 +307,63 @@ export default HomePage;
   </div>
 </section>
 
+{/* Portfolio Section */}
+<section id="portfolio" className="py-5">
+  <div className="container text-center">
+    
+    {/* Headline */}
+    <h2 className="mb-3">We Completed 1200+ Projects Yearly Successfully & Counting</h2>
+    <p className="text-muted">
+      It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. It is a long established fact that.
+    </p>
+    
+    {/* Statistics Row */}
+    <div className="row text-center mt-4">
+      
+      {/* Stat Card 1: Projects Completed */}
+      <div className="col-md-3 col-sm-6 mb-3">
+        <div className="card p-4">
+          <div className="icon mb-3">
+            <i className="fas fa-check-circle fa-3x text-primary"></i>
+          </div>
+          <h5>100+</h5>
+          <p className="text-muted">Projects Complete</p>
+        </div>
+      </div>
+      
+      {/* Stat Card 2: Active Projects */}
+      <div className="col-md-3 col-sm-6 mb-3">
+        <div className="card p-4">
+          <div className="icon mb-3">
+            <i className="fas fa-tasks fa-3x text-primary"></i>
+          </div>
+          <h5>100+</h5>
+          <p className="text-muted">Active Projects</p>
+        </div>
+      </div>
+      
+      {/* Stat Card 3: Client Satisfied */}
+      <div className="col-md-3 col-sm-6 mb-3">
+        <div className="card p-4">
+          <div className="icon mb-3">
+            <i className="fas fa-user-friends fa-3x text-primary"></i>
+          </div>
+          <h5>90+</h5>
+          <p className="text-muted">Client Satisfied</p>
+        </div>
+      </div>
+      
+      {/* Stat Card 4: Countries Available */}
+      <div className="col-md-3 col-sm-6 mb-3">
+        <div className="card p-4">
+          <div className="icon mb-3">
+            <i className="fas fa-globe fa-3x text-primary"></i>
+          </div>
+          <h5>56+</h5>
+          <p className="text-muted">Country Available</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</section>
