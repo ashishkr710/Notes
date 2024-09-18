@@ -266,3 +266,44 @@ export default HomePage;
   </div>
 </section>
 
+
+{/* Why Us Section */}
+<section id="why-us" className="py-5">
+  <div className="container">
+    <div className="row align-items-center">
+      
+      {/* Left side: Mobile device illustration */}
+      <div className="col-md-6 text-center">
+        <img
+          src="your_mobile_image_url"
+          alt="Mobile App"
+          className="img-fluid"
+          style={{ maxWidth: "300px" }} // Adjust the image width if necessary
+        />
+      </div>
+
+      {/* Right side: Text content */}
+      <div className="col-md-6">
+        <h2 className="mb-4">Why Us</h2>
+        <p className="text-muted">
+          It is a long established fact that a reader will be distracted by the
+          readable content of a page when looking at its layout. The point of
+          using Lorem Ipsum is that it has a more-or-less normal distribution of
+          letters, as opposed to using 'Content here, content here'.
+        </p>
+        <h4 className="mt-4">Built The App That Everyone Loves.</h4>
+        <p className="text-muted">
+          It is a long established fact that a reader will be distracted by the
+          readable content of a page when looking at its layout. The point of
+          using Lorem Ipsum is that it has a more-or-less normal distribution of
+          letters, as opposed to using 'Content here, content here'.
+        </p>
+        <button className="btn btn-outline-primary mt-3">
+          Get More <i className="fas fa-arrow-right"></i>
+        </button>
+      </div>
+      
+    </div>
+  </div>
+</section>
+
