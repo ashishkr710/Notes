@@ -227,3 +227,104 @@ const UpdateProfile = ({ userId }) => {
 export default UpdateProfile;
 
 
+
+form css -
+form {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="radio"],
+input[type="checkbox"],
+button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+input[type="radio"] {
+  width: auto;
+  margin-right: 5px;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+p {
+  color: red;
+  font-size: 14px;
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+label {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+input[type="radio"] + label {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+input[type="checkbox"] + label {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+@media (max-width: 600px) {
+  form {
+    padding: 10px;
+  }
+}
+html - 
+<form onSubmit={handleSubmit}>
+  <input type="text" name="firstName" onChange={handleChange} placeholder="First Name" />
+  <input type="text" name="lastName" onChange={handleChange} placeholder="Last Name" />
+  <input type="email" name="email" onChange={handleChange} placeholder="Email" />
+  <input type="password" name="password" onChange={handleChange} placeholder="Password" />
+  <input type="password" name="confirmPassword" onChange={handleChange} placeholder="Confirm Password" />
+  <input type="date" name="dateOfBirth" onChange={handleChange} />
+  
+  <div>
+    <input type="radio" name="gender" value="male" onChange={handleChange} /> Male
+    <input type="radio" name="gender" value="female" onChange={handleChange} /> Female
+  </div>
+
+  <input type="text" name="phoneNumber" onChange={handleChange} placeholder="Phone Number" />
+  
+  <div>
+    <input type="checkbox" name="terms" required /> I accept the terms and conditions
+  </div>
+  
+  <button type="submit">Submit</button>
+  {error && <p>{error}</p>}
+</form>
+
