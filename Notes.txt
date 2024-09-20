@@ -1,421 +1,229 @@
-
-const Post = require('../models/postModel');
-
-// Get all posts
-exports.getAllPosts = (req, res) => {
-    Post.getAllPosts((err, results) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        res.json(results);
-    });
-};
-
-// Get single post by ID
-exports.getPostById = (req, res) => {
-    Post.getPostById(req.params.id, (err, result) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        res.json(result);
-    });
-};
-
-// Create new post
+npx create-react-app react-frontend
+cd react-frontend
+npm start
 
 
-exports.createPost = (req, res) => {
-    const newPost = req.body;
-    Post.createPost(newPost, (err, result) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        res.send('Post added...');
-    });
-};
-
-// Update existing post
-exports.updatePost = (req, res) => {
-    const updatedPost = req.body;
-    Post.updatePost(req.params.id, updatedPost, (err, result) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        res.send('Post updated...');
-    });
-};
-
-// Delete a post
-exports.deletePost = (req, res) => {
-    Post.deletePost(req.params.id, (err, result) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-        res.send('Post deleted...');
-    });
-};
+mkdir node-backend
+cd node-backend
+npm init -y
+npm install express mysql2 cors body-parser bcryptjs jsonwebtoken
 
 
-routes.js
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  email VARCHAR(100) UNIQUE,
+  password VARCHAR(255),
+  date_of_birth DATE,
+  gender ENUM('male', 'female'),
+  phone_number VARCHAR(15),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-const express = require('express');
-const router = express.Router();
-const postController = require('../controllers/postController');
-
-// Routes
-router.get('/', postController.getAllPosts);
-router.get('/:id', postController.getPostById);
-router.post('/', postController.createPost);
-router.put('/:id', postController.updatePost);
-router.delete('/:id', postController.deletePost);
-
-module.exports = router;
-
-
-app.js 
-
+app.js backend 
 const express = require('express');
 const bodyParser = require('body-parser');
-const postRoutes = require('./routes/postRoutes');
+const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const mysql = require('mysql2');
 
 const app = express();
-
-// Middleware
+app.use(cors());
 app.use(bodyParser.json());
 
-// Post routes
-app.use('/api/posts', postRoutes);
-
-// Start the server
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: 'your_password',
+  database: 'your_database'
 });
 
+db.connect(err => {
+  if (err) throw err;
+  console.log('MySQL Connected...');
+});
+
+// API Routes
+// Signup API
+app.post('/signup', async (req, res) => {
+  const { firstName, lastName, email, password, dateOfBirth, gender, phoneNumber } = req.body;
+
+  // Check if email already exists
+  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, result) => {
+    if (result.length > 0) {
+      return res.status(400).json({ msg: 'Email already exists' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = { firstName, lastName, email, password: hashedPassword, dateOfBirth, gender, phoneNumber };
+    db.query('INSERT INTO users SET ?', user, (err, result) => {
+      if (err) throw err;
+      res.json({ msg: 'User registered successfully', userId: result.insertId });
+    });
+  });
+});
+
+// Get Profile API
+app.get('/profile/:id', (req, res) => {
+  const userId = req.params.id;
+  db.query('SELECT * FROM users WHERE id = ?', [userId], (err, result) => {
+    if (err) throw err;
+    res.json(result[0]);
+  });
+});
+
+// Update Profile API
+app.put('/update-profile/:id', (req, res) => {
+  const userId = req.params.id;
+  const { firstName, lastName, email, dateOfBirth, gender, phoneNumber } = req.body;
+
+  // Check if email already exists for other users
+  db.query('SELECT * FROM users WHERE email = ? AND id != ?', [email, userId], (err, result) => {
+    if (result.length > 0) {
+      return res.status(400).json({ msg: 'Email already in use' });
+    }
+
+    const user = { firstName, lastName, email, dateOfBirth, gender, phoneNumber };
+    db.query('UPDATE users SET ? WHERE id = ?', [user, userId], (err, result) => {
+      if (err) throw err;
+      res.json({ msg: 'Profile updated successfully' });
+    });
+  });
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 
-Lending Pages - import React from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
 
-const HomePage = () => {
+frontend 
+
+npm install axios
+
+import React, { useState } from 'react';
+import axios from 'axios';
+
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    firstName: '', lastName: '', email: '', password: '', confirmPassword: '', 
+    dateOfBirth: '', gender: '', phoneNumber: '', 
+  });
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    try {
+      const res = await axios.post('http://localhost:5000/signup', formData);
+      console.log(res.data);
+      // Redirect to profile
+    } catch (err) {
+      setError(err.response.data.msg);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="text" name="firstName" onChange={handleChange} placeholder="First Name" />
+      <input type="text" name="lastName" onChange={handleChange} placeholder="Last Name" />
+      <input type="email" name="email" onChange={handleChange} placeholder="Email" />
+      <input type="password" name="password" onChange={handleChange} placeholder="Password" />
+      <input type="password" name="confirmPassword" onChange={handleChange} placeholder="Confirm Password" />
+      <input type="date" name="dateOfBirth" onChange={handleChange} />
+      <input type="radio" name="gender" value="male" onChange={handleChange} /> Male
+      <input type="radio" name="gender" value="female" onChange={handleChange} /> Female
+      <input type="text" name="phoneNumber" onChange={handleChange} placeholder="Phone Number" />
+      <input type="checkbox" name="terms" required /> I accept the terms and conditions
+      <button type="submit">Submit</button>
+      {error && <p>{error}</p>}
+    </form>
+  );
+};
+
+export default Signup;
+
+
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const Profile = ({ userId }) => {
+  const [user, setUser] = useState({});
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const res = await axios.get(`http://localhost:5000/profile/${userId}`);
+      setUser(res.data);
+    };
+    fetchUser();
+  }, [userId]);
+
   return (
     <div>
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-light">
-        <div className="container">
-          <a className="navbar-brand" href="#home">
-            Apps Market
-          </a>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <a className="nav-link" href="#services">
-                  Services
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="#why-us">
-                  Why Us
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="#contact">
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="hero py-5 text-center">
-        <div className="container">
-          <h1 className="display-4">We Create Applications With Excellent Technology</h1>
-          <p className="lead">
-            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
-          </p>
-          <button className="btn btn-primary btn-lg m-2">Download Now</button>
-          <button className="btn btn-outline-primary btn-lg m-2">Explore More</button>
-          {/* Add a sample image */}
-          <img src="your_image_url_here" alt="App Showcase" className="img-fluid mt-4" />
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services" className="py-5 bg-light">
-        <div className="container">
-          <h2 className="text-center">We provide various kinds of services for you</h2>
-          <div className="row text-center mt-4">
-            <div className="col-md-4">
-              <div className="card">
-                <div className="card-body">
-                  <img src="unique_ui_image_url" alt="Unique App UI" className="img-fluid" />
-                  <h5 className="card-title">Unique App UI</h5>
-                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="card">
-                <div className="card-body">
-                  <img src="dashboard_image_url" alt="Excellent Dashboard" className="img-fluid" />
-                  <h5 className="card-title">Excellent Dashboard</h5>
-                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="card">
-                <div className="card-body">
-                  <img src="construction_image_url" alt="By Construction" className="img-fluid" />
-                  <h5 className="card-title">By Construction</h5>
-                  <p className="card-text">It is a long established fact that a reader will be distracted by the readable content.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Us Section */}
-      <section id="why-us" className="py-5">
-        <div className="container">
-          <h2 className="text-center">Why Us</h2>
-          <p className="text-center">
-            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
-          </p>
-        </div>
-      </section>
-
-      {/* Portfolio Section */}
-      <section id="portfolio" className="py-5 bg-light">
-        <div className="container">
-          <h2 className="text-center">Our Portfolio</h2>
-          <div className="row text-center mt-4">
-            <div className="col-md-4">
-              <img src="portfolio_image_1_url" alt="Portfolio 1" className="img-fluid" />
-              <p>Welcome</p>
-            </div>
-            <div className="col-md-4">
-              <img src="portfolio_image_2_url" alt="Portfolio 2" className="img-fluid" />
-              <p>Choose Your Plan</p>
-            </div>
-            <div className="col-md-4">
-              <img src="portfolio_image_3_url" alt="Portfolio 3" className="img-fluid" />
-              <p>Let's Start Your Trip</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-4 bg-dark text-white">
-        <div className="container text-center">
-          <div className="row">
-            <div className="col-md-6">
-              <p>&copy; 2024 Pixbey. All Rights Reserved.</p>
-            </div>
-            <div className="col-md-6">
-              <ul className="list-inline">
-                <li className="list-inline-item"><a href="#!" className="text-white">Home</a></li>
-                <li className="list-inline-item"><a href="#!" className="text-white">Pricing</a></li>
-                <li className="list-inline-item"><a href="#!" className="text-white">Download</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <h1>{user.firstName} {user.lastName}</h1>
+      <p>Email: {user.email}</p>
+      <p>Date of Birth: {user.dateOfBirth}</p>
+      <p>Gender: {user.gender}</p>
+      <p>Phone Number: {user.phoneNumber}</p>
     </div>
   );
 };
 
-export default HomePage;
+export default Profile;
 
 
-{/* Hero Section */}
-<section
-  className="hero py-5 text-center"
-  style={{
-    backgroundImage: "url('your_background_image_url')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-    color: "white"
-  }}
->
-  <div className="container">
-    <h1 className="display-4">We Create Applications With Excellent Technology</h1>
-    <p className="lead">
-      It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.
-    </p>
-    <button className="btn btn-primary btn-lg m-2">Download Now</button>
-    <button className="btn btn-outline-light btn-lg m-2">Explore More</button>
-    {/* Add a sample image */}
-    <img src="your_image_url_here" alt="App Showcase" className="img-fluid mt-4" />
-  </div>
-</section>
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const UpdateProfile = ({ userId }) => {
+  const [formData, setFormData] = useState({});
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const res = await axios.get(`http://localhost:5000/profile/${userId}`);
+      setFormData(res.data);
+    };
+    fetchUser();
+  }, [userId]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`http://localhost:5000/update-profile/${userId}`, formData);
+      // Redirect to profile
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} />
+      <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} />
+      <input type="email" name="email" value={formData.email} onChange={handleChange} />
+      <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} />
+      <input type="radio" name="gender" value="male" checked={formData.gender === 'male'} onChange={handleChange} /> Male
+      <input type="radio" name="gender" value="female" checked={formData.gender === 'female'} onChange={handleChange} /> Female
+      <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+      <button type="submit">Update</button>
+    </form>
+  );
+};
+
+export default UpdateProfile;
 
 
-{/* Why Us Section */}
-<section id="why-us" className="py-5">
-  <div className="container">
-    <div className="row align-items-center">
-      
-      {/* Left side: Mobile device illustration */}
-      <div className="col-md-6 text-center">
-        <img
-          src="your_mobile_image_url"
-          alt="Mobile App"
-          className="img-fluid"
-          style={{ maxWidth: "300px" }} // Adjust the image width if necessary
-        />
-      </div>
-
-      {/* Right side: Text content */}
-      <div className="col-md-6">
-        <h2 className="mb-4">Why Us</h2>
-        <p className="text-muted">
-          It is a long established fact that a reader will be distracted by the
-          readable content of a page when looking at its layout. The point of
-          using Lorem Ipsum is that it has a more-or-less normal distribution of
-          letters, as opposed to using 'Content here, content here'.
-        </p>
-        <h4 className="mt-4">Built The App That Everyone Loves.</h4>
-        <p className="text-muted">
-          It is a long established fact that a reader will be distracted by the
-          readable content of a page when looking at its layout. The point of
-          using Lorem Ipsum is that it has a more-or-less normal distribution of
-          letters, as opposed to using 'Content here, content here'.
-        </p>
-        <button className="btn btn-outline-primary mt-3">
-          Get More <i className="fas fa-arrow-right"></i>
-        </button>
-      </div>
-      
-    </div>
-  </div>
-</section>
-
-{/* Portfolio Section */}
-<section id="portfolio" className="py-5">
-  <div className="container text-center">
-    
-    {/* Headline */}
-    <h2 className="mb-3">We Completed 1200+ Projects Yearly Successfully & Counting</h2>
-    <p className="text-muted">
-      It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. It is a long established fact that.
-    </p>
-    
-    {/* Statistics Row */}
-    <div className="row text-center mt-4">
-      
-      {/* Stat Card 1: Projects Completed */}
-      <div className="col-md-3 col-sm-6 mb-3">
-        <div className="card p-4">
-          <div className="icon mb-3">
-            <i className="fas fa-check-circle fa-3x text-primary"></i>
-          </div>
-          <h5>100+</h5>
-          <p className="text-muted">Projects Complete</p>
-        </div>
-      </div>
-      
-      {/* Stat Card 2: Active Projects */}
-      <div className="col-md-3 col-sm-6 mb-3">
-        <div className="card p-4">
-          <div className="icon mb-3">
-            <i className="fas fa-tasks fa-3x text-primary"></i>
-          </div>
-          <h5>100+</h5>
-          <p className="text-muted">Active Projects</p>
-        </div>
-      </div>
-      
-      {/* Stat Card 3: Client Satisfied */}
-      <div className="col-md-3 col-sm-6 mb-3">
-        <div className="card p-4">
-          <div className="icon mb-3">
-            <i className="fas fa-user-friends fa-3x text-primary"></i>
-          </div>
-          <h5>90+</h5>
-          <p className="text-muted">Client Satisfied</p>
-        </div>
-      </div>
-      
-      {/* Stat Card 4: Countries Available */}
-      <div className="col-md-3 col-sm-6 mb-3">
-        <div className="card p-4">
-          <div className="icon mb-3">
-            <i className="fas fa-globe fa-3x text-primary"></i>
-          </div>
-          <h5>56+</h5>
-          <p className="text-muted">Country Available</p>
-        </div>
-      </div>
-      
-    </div>
-  </div>
-</section>
-{/* Footer Section */}
-<footer className="footer bg-dark text-white py-5">
-  <div className="container">
-    <div className="row">
-
-      {/* Footer Column 1: Company Info */}
-      <div className="col-md-4 col-sm-6 mb-4">
-        <h5>Company Name</h5>
-        <p>
-          A brief description of the company goes here. It might talk about your vision, mission, or some background information that users may find useful.
-        </p>
-      </div>
-
-      {/* Footer Column 2: Quick Links */}
-      <div className="col-md-4 col-sm-6 mb-4">
-        <h5>Quick Links</h5>
-        <ul className="list-unstyled">
-          <li><a href="#home" className="text-white">Home</a></li>
-          <li><a href="#services" className="text-white">Services</a></li>
-          <li><a href="#about" className="text-white">About Us</a></li>
-          <li><a href="#contact" className="text-white">Contact Us</a></li>
-        </ul>
-      </div>
-
-      {/* Footer Column 3: Contact Info */}
-      <div className="col-md-4 col-sm-6 mb-4">
-        <h5>Contact Us</h5>
-        <p><i className="fas fa-phone-alt"></i> +123-456-7890</p>
-        <p><i className="fas fa-envelope"></i> info@company.com</p>
-        <p><i className="fas fa-map-marker-alt"></i> 123 Street, City, Country</p>
-      </div>
-
-    </div>
-
-    {/* Social Media Links */}
-    <div className="row mt-4">
-      <div className="col text-center">
-        <a href="#" className="text-white mx-2"><i className="fab fa-facebook-f"></i></a>
-        <a href="#" className="text-white mx-2"><i className="fab fa-twitter"></i></a>
-        <a href="#" className="text-white mx-2"><i className="fab fa-instagram"></i></a>
-        <a href="#" className="text-white mx-2"><i className="fab fa-linkedin"></i></a>
-      </div>
-    </div>
-
-    {/* Copyright Info */}
-    <div className="row mt-4">
-      <div className="col text-center">
-        <p className="mb-0">&copy; 2024 Company Name. All rights reserved.</p>
-      </div>
-    </div>
-  </div>
-</footer>
