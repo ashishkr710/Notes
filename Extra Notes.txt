@@ -1,0 +1,186 @@
+To create a Node.js application with MySQL databases that uses JWT (JSON Web Token) for login and signup, you can follow these steps. Here's a basic structure and code to get you started:
+
+### Prerequisites:
+1. Install Node.js from [here](https://nodejs.org/en/).
+2. Install MySQL and set up a database.
+3. Use a tool like Postman to test the API.
+
+### Step-by-Step Implementation:
+
+#### Step 1: Initialize Node.js project
+
+Open your terminal and initialize a new project:
+
+```bash
+mkdir node-jwt-auth
+cd node-jwt-auth
+npm init -y
+```
+
+#### Step 2: Install necessary dependencies
+
+```bash
+npm install express mysql2 bcryptjs jsonwebtoken body-parser
+```
+
+- `express`: Web framework for Node.js.
+- `mysql2`: MySQL client for Node.js.
+- `bcryptjs`: Library to hash passwords.
+- `jsonwebtoken`: Library to sign and verify JWT tokens.
+- `body-parser`: Middleware to parse incoming request bodies.
+
+#### Step 3: Setup MySQL Database
+
+Create a new MySQL database and a table for users:
+
+```sql
+CREATE DATABASE jwt_auth_db;
+
+USE jwt_auth_db;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL
+);
+```
+
+#### Step 4: Create the Node.js application
+
+In your project directory, create a file named `app.js` and write the following code:
+
+```javascript
+const express = require('express');
+const mysql = require('mysql2');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const bodyParser = require('body-parser');
+
+// Setup express
+const app = express();
+app.use(bodyParser.json());
+
+// MySQL connection
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root', // replace with your MySQL username
+  password: '', // replace with your MySQL password
+  database: 'jwt_auth_db' // your database name
+});
+
+db.connect((err) => {
+  if (err) throw err;
+  console.log('MySQL Connected...');
+});
+
+// Secret key for JWT
+const jwtSecret = 'your_jwt_secret'; // Keep this secret and secure
+
+// Signup endpoint
+app.post('/signup', (req, res) => {
+  const { username, email, password } = req.body;
+  
+  // Hash the password
+  bcrypt.hash(password, 10, (err, hashedPassword) => {
+    if (err) throw err;
+
+    const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
+    db.query(query, [username, email, hashedPassword], (err, result) => {
+      if (err) return res.status(500).json({ message: 'User already exists' });
+      res.status(201).json({ message: 'User registered successfully' });
+    });
+  });
+});
+
+// Login endpoint
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  const query = `SELECT * FROM users WHERE email = ?`;
+  db.query(query, [email], (err, results) => {
+    if (err) throw err;
+
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const user = results[0];
+
+    // Compare the hashed password
+    bcrypt.compare(password, user.password, (err, isMatch) => {
+      if (err) throw err;
+
+      if (isMatch) {
+        // Create JWT token
+        const token = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: '1h' });
+        res.json({ token });
+      } else {
+        res.status(401).json({ message: 'Invalid credentials' });
+      }
+    });
+  });
+});
+
+// Middleware to authenticate JWT token
+const authenticateToken = (req, res, next) => {
+  const token = req.header('Authorization')?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(403).json({ message: 'Token is missing' });
+  }
+
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
+// Protected route (example)
+app.get('/protected', authenticateToken, (req, res) => {
+  res.json({ message: `Welcome, your user ID is ${req.user.id}` });
+});
+
+// Start the server
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+```
+
+#### Step 5: Testing the API
+
+- **Signup**: Send a POST request to `http://localhost:3000/signup` with the following JSON body:
+
+  ```json
+  {
+    "username": "ashish",
+    "email": "ashish@example.com",
+    "password": "yourpassword"
+  }
+  ```
+
+- **Login**: Send a POST request to `http://localhost:3000/login` with the following JSON body:
+
+  ```json
+  {
+    "email": "ashish@example.com",
+    "password": "yourpassword"
+  }
+  ```
+
+  If successful, you'll receive a JWT token in the response.
+
+- **Access Protected Route**: Send a GET request to `http://localhost:3000/protected` with the JWT token in the `Authorization` header like this:
+
+  ```
+  Authorization: Bearer <your_jwt_token>
+  ```
+
+#### Step 6: Further Enhancements
+
+1. **Validation**: You should add validation to ensure fields are not empty.
+2. **Token Expiry & Refresh**: Implement token expiration and refresh mechanism.
+3. **Error Handling**: Improve error handling for better user feedback.
+
+This is a basic application that should get you started with JWT authentication using Node.js and MySQL.
