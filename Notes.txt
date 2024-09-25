@@ -1,1 +1,242 @@
+To replace the raw MySQL queries with Sequelize, we'll need to install and configure Sequelize ORM along with `sequelize-cli`, and create models for managing the database structure.
 
+### Step-by-Step Guide to Implement Sequelize
+
+#### Step 1: Install Sequelize and Sequelize CLI
+
+```bash
+npm install sequelize sequelize-cli mysql2
+```
+
+- `sequelize`: The ORM for Node.js.
+- `sequelize-cli`: Command-line interface for Sequelize.
+- `mysql2`: MySQL driver for Node.js.
+
+#### Step 2: Initialize Sequelize
+
+In your project directory, initialize Sequelize:
+
+```bash
+npx sequelize-cli init
+```
+
+This will create the following structure:
+```
+/config
+/models
+/migrations
+/seeders
+```
+
+#### Step 3: Configure Sequelize in `config/config.json`
+
+In the `/config/config.json` file, set up your database connection details:
+
+```json
+{
+  "development": {
+    "username": "root",
+    "password": "",
+    "database": "jwt_auth_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "jwt_auth_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "jwt_auth_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  }
+}
+```
+
+#### Step 4: Create User Model
+
+Generate a user model using the following command:
+
+```bash
+npx sequelize-cli model:generate --name User --attributes username:string,email:string,password:string
+```
+
+This command will generate a migration file in the `/migrations` folder and a model file in `/models`.
+
+#### Step 5: Run Migrations
+
+To apply the migration and create the `users` table, run:
+
+```bash
+npx sequelize-cli db:migrate
+```
+
+#### Step 6: Modify the Model (`models/user.js`)
+
+Ensure the `User` model is configured correctly:
+
+```javascript
+'use strict';
+const { Model } = require('sequelize');
+
+module.exports = (sequelize, DataTypes) => {
+  class User extends Model {
+    static associate(models) {
+      // Define associations here if needed
+    }
+  }
+  
+  User.init({
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false
+    }
+  }, {
+    sequelize,
+    modelName: 'User',
+    tableName: 'users',
+    timestamps: false
+  });
+
+  return User;
+};
+```
+
+#### Step 7: Update `app.js` to Use Sequelize
+
+Now we will replace the raw MySQL queries in `app.js` with Sequelize.
+
+Update `app.js` as follows:
+
+```javascript
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const bodyParser = require('body-parser');
+const { Sequelize, DataTypes } = require('sequelize');
+const { User } = require('./models');  // Import the User model
+
+const app = express();
+app.use(bodyParser.json());
+
+// Secret key for JWT
+const jwtSecret = 'your_jwt_secret';
+
+// Sequelize instance
+const sequelize = new Sequelize('jwt_auth_db', 'root', '', {
+  host: 'localhost',
+  dialect: 'mysql'
+});
+
+// Signup endpoint
+app.post('/signup', async (req, res) => {
+  const { username, email, password } = req.body;
+  
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const newUser = await User.create({
+      username,
+      email,
+      password: hashedPassword
+    });
+
+    res.status(201).json({ message: 'User registered successfully', user: newUser });
+  } catch (error) {
+    res.status(500).json({ message: 'User already exists or invalid input', error });
+  }
+});
+
+// Login endpoint
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'An error occurred', error });
+  }
+});
+
+// Middleware to authenticate JWT token
+const authenticateToken = (req, res, next) => {
+  const token = req.header('Authorization')?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(403).json({ message: 'Token is missing' });
+  }
+
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
+// Protected route
+app.get('/protected', authenticateToken, (req, res) => {
+  res.json({ message: `Welcome, your user ID is ${req.user.id}` });
+});
+
+// Start the server
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+```
+
+#### Step 8: Test the API
+
+1. **Signup**: Make a `POST` request to `http://localhost:3000/signup` with the following body:
+
+    ```json
+    {
+      "username": "ashish",
+      "email": "ashish@example.com",
+      "password": "yourpassword"
+    }
+    ```
+
+2. **Login**: Make a `POST` request to `http://localhost:3000/login` with the following body:
+
+    ```json
+    {
+      "email": "ashish@example.com",
+      "password": "yourpassword"
+    }
+    ```
+
+3. **Access Protected Route**: Make a `GET` request to `http://localhost:3000/protected` with the JWT token in the `Authorization` header like this:
+
+    ```
+    Authorization: Bearer <your_jwt_token>
+    ```
+
+This version of the application uses Sequelize ORM to manage the MySQL database instead of raw queries.
