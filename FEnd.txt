@@ -1,0 +1,293 @@
+I'll break down the code for each part of the assignment into frontend and backend sections, focusing on React with TypeScript and Express.js for backend development.
+
+### **Frontend Code** (React with TypeScript)
+
+#### 1. **Setup**
+Install the necessary packages for React, TypeScript, Formik, Axios, and JWT handling:
+
+```bash
+npx create-react-app my-app --template typescript
+cd my-app
+npm install formik yup axios jwt-decode
+```
+
+#### 2. **App.tsx**
+Your `App.tsx` will contain routing between the screens.
+
+```tsx
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Signup from './components/Signup';
+import Login from './components/Login';
+import Profile from './components/Profile';
+import UpdateProfile from './components/UpdateProfile';
+import { useState } from 'react';
+
+const App: React.FC = () => {
+  const [jwtToken, setJwtToken] = useState<string | null>(localStorage.getItem('jwt'));
+
+  const handleLogout = () => {
+    localStorage.removeItem('jwt');
+    setJwtToken(null);
+  };
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/signup" />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login setJwtToken={setJwtToken} />} />
+        <Route
+          path="/profile"
+          element={jwtToken ? <Profile token={jwtToken} handleLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/update-profile"
+          element={jwtToken ? <UpdateProfile token={jwtToken} /> : <Navigate to="/login" />}
+        />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
+```
+
+#### 3. **Signup.tsx**
+This is the signup form using Formik for validation.
+
+```tsx
+import React from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+
+const Signup: React.FC = () => {
+  const navigate = useNavigate();
+
+  const validationSchema = Yup.object({
+    firstName: Yup.string().required('Required'),
+    lastName: Yup.string().required('Required'),
+    email: Yup.string().email('Invalid email format').required('Required'),
+    password: Yup.string().min(6, 'Password must be at least 6 characters').required('Required'),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref('password')], 'Passwords must match')
+      .required('Required'),
+  });
+
+  const handleSubmit = async (values: any) => {
+    try {
+      await axios.post('/api/signup', values);
+      navigate('/login');
+    } catch (error) {
+      alert('Email already exists');
+    }
+  };
+
+  return (
+    <div>
+      <h2>Signup</h2>
+      <Formik
+        initialValues={{
+          firstName: '',
+          lastName: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+        }}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        <Form>
+          <Field name="firstName" placeholder="First Name" />
+          <ErrorMessage name="firstName" />
+          <Field name="lastName" placeholder="Last Name" />
+          <ErrorMessage name="lastName" />
+          <Field name="email" placeholder="Email" />
+          <ErrorMessage name="email" />
+          <Field name="password" type="password" placeholder="Password" />
+          <ErrorMessage name="password" />
+          <Field name="confirmPassword" type="password" placeholder="Confirm Password" />
+          <ErrorMessage name="confirmPassword" />
+          <button type="submit">Submit</button>
+        </Form>
+      </Formik>
+      <Link to="/login">Already have an account? Login here</Link>
+    </div>
+  );
+};
+
+export default Signup;
+```
+
+#### 4. **Login.tsx**
+This component logs in the user and stores the JWT in local storage.
+
+```tsx
+import React from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+
+interface LoginProps {
+  setJwtToken: (token: string) => void;
+}
+
+const Login: React.FC<LoginProps> = ({ setJwtToken }) => {
+  const navigate = useNavigate();
+
+  const validationSchema = Yup.object({
+    email: Yup.string().email('Invalid email format').required('Required'),
+    password: Yup.string().required('Required'),
+  });
+
+  const handleSubmit = async (values: any) => {
+    try {
+      const response = await axios.post('/api/login', values);
+      localStorage.setItem('jwt', response.data.token);
+      setJwtToken(response.data.token);
+      navigate('/profile');
+    } catch (error) {
+      alert('Invalid credentials');
+    }
+  };
+
+  return (
+    <div>
+      <h2>Login</h2>
+      <Formik
+        initialValues={{
+          email: '',
+          password: '',
+        }}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        <Form>
+          <Field name="email" placeholder="Email" />
+          <ErrorMessage name="email" />
+          <Field name="password" type="password" placeholder="Password" />
+          <ErrorMessage name="password" />
+          <button type="submit">Submit</button>
+        </Form>
+      </Formik>
+      <Link to="/signup">Don't have an account? Sign up here</Link>
+    </div>
+  );
+};
+
+export default Login;
+```
+
+#### 5. **Profile.tsx**
+This component displays user profile information and handles logout.
+
+```tsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+
+interface ProfileProps {
+  token: string;
+  handleLogout: () => void;
+}
+
+const Profile: React.FC<ProfileProps> = ({ token, handleLogout }) => {
+  const [userData, setUserData] = useState<any>({});
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    axios
+      .get('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => setUserData(response.data))
+      .catch(() => navigate('/login'));
+  }, [token, navigate]);
+
+  return (
+    <div>
+      <h2>Profile</h2>
+      <p>First Name: {userData.firstName}</p>
+      <p>Last Name: {userData.lastName}</p>
+      <p>Email: {userData.email}</p>
+      <Link to="/update-profile">Update Profile</Link>
+      <button onClick={handleLogout}>Logout</button>
+    </div>
+  );
+};
+
+export default Profile;
+```
+
+#### 6. **UpdateProfile.tsx**
+This form allows users to update their profile.
+
+```tsx
+import React from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+interface UpdateProfileProps {
+  token: string;
+}
+
+const UpdateProfile: React.FC<UpdateProfileProps> = ({ token }) => {
+  const navigate = useNavigate();
+
+  const validationSchema = Yup.object({
+    firstName: Yup.string().required('Required'),
+    lastName: Yup.string().required('Required'),
+    email: Yup.string().email('Invalid email format').required('Required'),
+    dateOfBirth: Yup.date().required('Required'),
+    gender: Yup.string().required('Required'),
+    phoneNumber: Yup.string().required('Required'),
+  });
+
+  const handleSubmit = async (values: any) => {
+    try {
+      await axios.put('/api/profile', values, { headers: { Authorization: `Bearer ${token}` } });
+      navigate('/profile');
+    } catch (error) {
+      alert('Email already exists or another error occurred');
+    }
+  };
+
+  return (
+    <div>
+      <h2>Update Profile</h2>
+      <Formik
+        initialValues={{
+          firstName: '',
+          lastName: '',
+          email: '',
+          dateOfBirth: '',
+          gender: '',
+          phoneNumber: '',
+        }}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        <Form>
+          <Field name="firstName" placeholder="First Name" />
+          <ErrorMessage name="firstName" />
+          <Field name="lastName" placeholder="Last Name" />
+          <ErrorMessage name="lastName" />
+          <Field name="email" placeholder="Email" />
+          <ErrorMessage name="email" />
+          <Field name="dateOfBirth" type="date" placeholder="Date of Birth" />
+          <ErrorMessage name="dateOfBirth" />
+          <Field name="gender" as="select">
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </Field>
+          <ErrorMessage name="gender" />
+          <Field name="phoneNumber" placeholder="Phone Number" />
+          <ErrorMessage name="phoneNumber" />
+          <button type="submit">Update</button>
+        </Form>
+      </Formik>
+   
