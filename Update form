@@ -1,0 +1,116 @@
+import React, { useState, useEffect } from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+interface UpdateProfileProps {
+  token: string;
+}
+
+const UpdateProfile: React.FC<UpdateProfileProps> = ({ token }) => {
+  const [userData, setUserData] = useState<any>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    dateOfBirth: '',
+    gender: '',
+    phoneNumber: ''
+  });
+  
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    axios
+      .get('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => {
+        setUserData(response.data);
+      })
+      .catch((error) => {
+        console.error('Failed to fetch profile data', error);
+      });
+  }, [token]);
+
+  const validationSchema = Yup.object({
+    firstName: Yup.string().required('Required'),
+    lastName: Yup.string().required('Required'),
+    email: Yup.string().email('Invalid email format').required('Required'),
+    dateOfBirth: Yup.date().required('Required'),
+    gender: Yup.string().required('Required'),
+    phoneNumber: Yup.string().required('Required'),
+  });
+
+  const handleSubmit = async (values: any) => {
+    try {
+      await axios.put('/api/profile', values, { headers: { Authorization: `Bearer ${token}` } });
+      navigate('/profile');
+    } catch (error) {
+      alert('Email already exists or another error occurred');
+    }
+  };
+
+  return (
+    <div>
+      <h2>Update Profile</h2>
+      <Formik
+        initialValues={{
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          email: userData.email || '',
+          dateOfBirth: userData.dateOfBirth || '',
+          gender: userData.gender || '',
+          phoneNumber: userData.phoneNumber || '',
+        }}
+        enableReinitialize={true}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        <Form>
+          <div>
+            <label>First Name</label>
+            <Field name="firstName" placeholder="First Name" />
+            <ErrorMessage name="firstName" />
+          </div>
+
+          <div>
+            <label>Last Name</label>
+            <Field name="lastName" placeholder="Last Name" />
+            <ErrorMessage name="lastName" />
+          </div>
+
+          <div>
+            <label>Email</label>
+            <Field name="email" type="email" placeholder="Email" />
+            <ErrorMessage name="email" />
+          </div>
+
+          <div>
+            <label>Date of Birth</label>
+            <Field name="dateOfBirth" type="date" placeholder="Date of Birth" />
+            <ErrorMessage name="dateOfBirth" />
+          </div>
+
+          <div>
+            <label>Gender</label>
+            <Field as="select" name="gender">
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </Field>
+            <ErrorMessage name="gender" />
+          </div>
+
+          <div>
+            <label>Phone Number</label>
+            <Field name="phoneNumber" placeholder="Phone Number" />
+            <ErrorMessage name="phoneNumber" />
+          </div>
+
+          <button type="submit">Update</button>
+        </Form>
+      </Formik>
+    </div>
+  );
+};
+
+export default UpdateProfile;
