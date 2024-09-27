@@ -1,242 +1,821 @@
-To replace the raw MySQL queries with Sequelize, we'll need to install and configure Sequelize ORM along with `sequelize-cli`, and create models for managing the database structure.
+### Switching Backend from MongoDB to MySQL
 
-### Step-by-Step Guide to Implement Sequelize
+To transition your backend from **MongoDB** to **MySQL**, we'll use **TypeORM**, a powerful ORM (Object-Relational Mapping) library that works seamlessly with **TypeScript**. **TypeORM** provides a robust and type-safe way to interact with relational databases like MySQL.
 
-#### Step 1: Install Sequelize and Sequelize CLI
+Below is a comprehensive guide to setting up your backend with **Node.js**, **Express.js**, **TypeORM**, and **MySQL**.
 
-```bash
-npm install sequelize sequelize-cli mysql2
-```
+---
 
-- `sequelize`: The ORM for Node.js.
-- `sequelize-cli`: Command-line interface for Sequelize.
-- `mysql2`: MySQL driver for Node.js.
+### **1. Setup**
 
-#### Step 2: Initialize Sequelize
+#### **a. Initialize the Project**
 
-In your project directory, initialize Sequelize:
+If you haven't already, create a new directory for your backend and initialize it with `npm`:
 
 ```bash
-npx sequelize-cli init
+mkdir backend
+cd backend
+npm init -y
 ```
 
-This will create the following structure:
-```
-/config
-/models
-/migrations
-/seeders
+#### **b. Install Dependencies**
+
+Install the necessary runtime and development dependencies:
+
+```bash
+# Install runtime dependencies
+npm install express bcryptjs jsonwebtoken cors dotenv reflect-metadata typeorm mysql2
+
+# Install development dependencies
+npm install -D typescript ts-node-dev @types/express @types/node @types/bcryptjs @types/jsonwebtoken @types/cors
 ```
 
-#### Step 3: Configure Sequelize in `config/config.json`
+**Packages Explanation:**
 
-In the `/config/config.json` file, set up your database connection details:
+- **express**: Web framework for Node.js.
+- **bcryptjs**: For hashing passwords.
+- **jsonwebtoken**: For JWT authentication.
+- **cors**: To handle Cross-Origin Resource Sharing.
+- **dotenv**: To manage environment variables.
+- **reflect-metadata**: Required by TypeORM for decorators.
+- **typeorm**: ORM for TypeScript and JavaScript.
+- **mysql2**: MySQL client for Node.js compatible with TypeORM.
+
+#### **c. Initialize TypeScript**
+
+Initialize TypeScript configuration:
+
+```bash
+npx tsc --init
+```
+
+Modify the `tsconfig.json` to suit the project. Here's a recommended configuration:
 
 ```json
 {
-  "development": {
-    "username": "root",
-    "password": "",
-    "database": "jwt_auth_db",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "test": {
-    "username": "root",
-    "password": null,
-    "database": "jwt_auth_db",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
-  },
-  "production": {
-    "username": "root",
-    "password": null,
-    "database": "jwt_auth_db",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
-  }
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
 ```
 
-#### Step 4: Create User Model
+**Key Changes:**
 
-Generate a user model using the following command:
+- **experimentalDecorators** and **emitDecoratorMetadata**: Required for TypeORM decorators.
+- **rootDir** and **outDir**: Define source and output directories.
 
-```bash
-npx sequelize-cli model:generate --name User --attributes username:string,email:string,password:string
+#### **d. Project Structure**
+
+Create the following folder structure:
+
+```
+backend/
+├── src/
+│   ├── controllers/
+│   │   └── userController.ts
+│   ├── middleware/
+│   │   └── auth.ts
+│   ├── entities/
+│   │   └── User.ts
+│   ├── routes/
+│   │   └── userRoutes.ts
+│   ├── utils/
+│   │   └── validateEnv.ts
+│   ├── app.ts
+│   ├── data-source.ts
+│   └── server.ts
+├── .env
+├── package.json
+├── tsconfig.json
 ```
 
-This command will generate a migration file in the `/migrations` folder and a model file in `/models`.
+---
 
-#### Step 5: Run Migrations
+### **2. Configuration**
 
-To apply the migration and create the `users` table, run:
+#### **a. Environment Variables**
 
-```bash
-npx sequelize-cli db:migrate
+Create a `.env` file in the root of the `backend` directory to store environment variables:
+
+```env
+PORT=5000
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=your_mysql_username
+DB_PASSWORD=your_mysql_password
+DB_DATABASE=your_database_name
+JWT_SECRET=your_jwt_secret_key
 ```
 
-#### Step 6: Modify the Model (`models/user.js`)
+**Notes:**
 
-Ensure the `User` model is configured correctly:
+- Replace `your_mysql_username`, `your_mysql_password`, and `your_database_name` with your actual MySQL credentials and desired database name.
+- Ensure that the MySQL server is running and accessible with the provided credentials.
 
-```javascript
-'use strict';
-const { Model } = require('sequelize');
+#### **b. Validate Environment Variables**
 
-module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
-    static associate(models) {
-      // Define associations here if needed
-    }
+Create a utility to validate environment variables.
+
+**`src/utils/validateEnv.ts`**
+
+```typescript
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const requiredEnvVars = [
+  'PORT',
+  'DB_HOST',
+  'DB_PORT',
+  'DB_USERNAME',
+  'DB_PASSWORD',
+  'DB_DATABASE',
+  'JWT_SECRET',
+];
+
+requiredEnvVars.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`Error: Missing environment variable ${key}`);
+    process.exit(1);
   }
-  
-  User.init({
-    username: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false
-    }
-  }, {
-    sequelize,
-    modelName: 'User',
-    tableName: 'users',
-    timestamps: false
-  });
+});
 
-  return User;
+export default {
+  port: process.env.PORT || 5000,
+  db: {
+    host: process.env.DB_HOST!,
+    port: parseInt(process.env.DB_PORT!, 10),
+    username: process.env.DB_USERNAME!,
+    password: process.env.DB_PASSWORD!,
+    database: process.env.DB_DATABASE!,
+  },
+  jwtSecret: process.env.JWT_SECRET!,
 };
 ```
 
-#### Step 7: Update `app.js` to Use Sequelize
+---
 
-Now we will replace the raw MySQL queries in `app.js` with Sequelize.
+### **3. Database Connection with TypeORM**
 
-Update `app.js` as follows:
+**TypeORM** requires a data source configuration to connect to the database.
 
-```javascript
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const bodyParser = require('body-parser');
-const { Sequelize, DataTypes } = require('sequelize');
-const { User } = require('./models');  // Import the User model
+**`src/data-source.ts`**
 
-const app = express();
-app.use(bodyParser.json());
+```typescript
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
+import config from './utils/validateEnv';
+import { User } from './entities/User';
 
-// Secret key for JWT
-const jwtSecret = 'your_jwt_secret';
-
-// Sequelize instance
-const sequelize = new Sequelize('jwt_auth_db', 'root', '', {
-  host: 'localhost',
-  dialect: 'mysql'
+export const AppDataSource = new DataSource({
+  type: 'mysql',
+  host: config.db.host,
+  port: config.db.port,
+  username: config.db.username,
+  password: config.db.password,
+  database: config.db.database,
+  synchronize: true, // Set to false in production and use migrations
+  logging: false,
+  entities: [User],
+  migrations: [],
+  subscribers: [],
 });
+```
 
-// Signup endpoint
-app.post('/signup', async (req, res) => {
-  const { username, email, password } = req.body;
-  
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const newUser = await User.create({
-      username,
-      email,
-      password: hashedPassword
-    });
+**Important:**
 
-    res.status(201).json({ message: 'User registered successfully', user: newUser });
-  } catch (error) {
-    res.status(500).json({ message: 'User already exists or invalid input', error });
+- **synchronize: true**: Automatically syncs your entities with the database. **Set to `false` in production** and use migrations for better control.
+
+---
+
+### **4. Define the User Entity**
+
+With TypeORM, you define entities representing your database tables.
+
+**`src/entities/User.ts`**
+
+```typescript
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column({ length: 100 })
+  firstName!: string;
+
+  @Column({ length: 100 })
+  lastName!: string;
+
+  @Column({ unique: true, length: 255 })
+  email!: string;
+
+  @Column({ length: 255 })
+  password!: string;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth!: string;
+
+  @Column({ type: 'enum', enum: ['male', 'female'], nullable: true })
+  gender!: 'male' | 'female';
+
+  @Column({ length: 20, nullable: true })
+  phoneNumber!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+```
+
+**Field Explanations:**
+
+- **id**: Primary key, auto-generated.
+- **firstName** & **lastName**: User's names.
+- **email**: Unique identifier for login.
+- **password**: Hashed password.
+- **dateOfBirth**, **gender**, **phoneNumber**: Additional profile information.
+- **createdAt** & **updatedAt**: Timestamps managed by TypeORM.
+
+---
+
+### **5. Middleware for Authentication**
+
+Create middleware to protect routes using JWT.
+
+**`src/middleware/auth.ts`**
+
+```typescript
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import config from '../utils/validateEnv';
+import { AppDataSource } from '../data-source';
+import { User } from '../entities/User';
+
+interface AuthRequest extends Request {
+  user?: User;
+}
+
+const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.header('Authorization');
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
   }
-});
 
-// Login endpoint
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const token = authHeader.split(' ')[1];
 
   try {
-    const user = await User.findOne({ where: { email } });
-    
+    const decoded = jwt.verify(token, config.jwtSecret) as { id: number };
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: decoded.id });
+
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Token is not valid' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: '1h' });
-    res.json({ token });
-  } catch (error) {
-    res.status(500).json({ message: 'An error occurred', error });
-  }
-});
-
-// Middleware to authenticate JWT token
-const authenticateToken = (req, res, next) => {
-  const token = req.header('Authorization')?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(403).json({ message: 'Token is missing' });
-  }
-
-  jwt.verify(token, jwtSecret, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
     req.user = user;
     next();
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ message: 'Token is not valid' });
+  }
+};
+
+export default auth;
+```
+
+---
+
+### **6. User Controller**
+
+Handle user-related operations such as signup, login, profile retrieval, and profile updates.
+
+**`src/controllers/userController.ts`**
+
+```typescript
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { AppDataSource } from '../data-source';
+import { User } from '../entities/User';
+import config from '../utils/validateEnv';
+
+// Helper function to generate JWT
+const generateToken = (id: number) => {
+  return jwt.sign({ id }, config.jwtSecret, { expiresIn: '1h' });
+};
+
+// @desc    Register new user
+// @route   POST /api/signup
+// @access  Public
+export const signup = async (req: Request, res: Response) => {
+  const { firstName, lastName, email, password } = req.body;
+
+  const userRepository = AppDataSource.getRepository(User);
+
+  try {
+    // Check if user exists
+    const existingUser = await userRepository.findOneBy({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = userRepository.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+    });
+
+    await userRepository.save(user);
+
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+};
+
+// @desc    Authenticate user & get token
+// @route   POST /api/login
+// @access  Public
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  const userRepository = AppDataSource.getRepository(User);
+
+  try {
+    // Check for user
+    const user = await userRepository.findOneBy({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid Credentials' });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid Credentials' });
+    }
+
+    // Generate JWT
+    const token = generateToken(user.id);
+
+    res.json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+};
+
+// @desc    Get user profile
+// @route   GET /api/profile
+// @access  Private
+export const getProfile = async (req: Request, res: Response) => {
+  const user = (req as any).user as User;
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  res.json({
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    dateOfBirth: user.dateOfBirth,
+    gender: user.gender,
+    phoneNumber: user.phoneNumber,
   });
 };
 
-// Protected route
-app.get('/protected', authenticateToken, (req, res) => {
-  res.json({ message: `Welcome, your user ID is ${req.user.id}` });
-});
+// @desc    Update user profile
+// @route   PUT /api/profile
+// @access  Private
+export const updateProfile = async (req: Request, res: Response) => {
+  const user = (req as any).user as User;
+  const { firstName, lastName, email, dateOfBirth, gender, phoneNumber } = req.body;
 
-// Start the server
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
-});
+  const userRepository = AppDataSource.getRepository(User);
+
+  try {
+    // Check if email is being updated and if it's unique
+    if (email && email !== user.email) {
+      const existingUser = await userRepository.findOneBy({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already exists' });
+      }
+      user.email = email;
+    }
+
+    // Update fields
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+    if (gender) user.gender = gender;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+
+    await userRepository.save(user);
+
+    res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+};
 ```
 
-#### Step 8: Test the API
+---
 
-1. **Signup**: Make a `POST` request to `http://localhost:3000/signup` with the following body:
+### **7. Define Routes**
 
-    ```json
-    {
-      "username": "ashish",
-      "email": "ashish@example.com",
-      "password": "yourpassword"
-    }
-    ```
+Set up routes to handle API endpoints.
 
-2. **Login**: Make a `POST` request to `http://localhost:3000/login` with the following body:
+**`src/routes/userRoutes.ts`**
 
-    ```json
-    {
-      "email": "ashish@example.com",
-      "password": "yourpassword"
-    }
-    ```
+```typescript
+import express from 'express';
+import { signup, login, getProfile, updateProfile } from '../controllers/userController';
+import auth from '../middleware/auth';
 
-3. **Access Protected Route**: Make a `GET` request to `http://localhost:3000/protected` with the JWT token in the `Authorization` header like this:
+const router = express.Router();
 
-    ```
-    Authorization: Bearer <your_jwt_token>
-    ```
+// Public Routes
+router.post('/signup', signup);
+router.post('/login', login);
 
-This version of the application uses Sequelize ORM to manage the MySQL database instead of raw queries.
+// Protected Routes
+router.get('/profile', auth, getProfile);
+router.put('/profile', auth, updateProfile);
+
+export default router;
+```
+
+---
+
+### **8. Initialize Express App**
+
+Set up the Express application with necessary middleware and routes.
+
+**`src/app.ts`**
+
+```typescript
+import express from 'express';
+import cors from 'cors';
+import userRoutes from './routes/userRoutes';
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api', userRoutes);
+
+// Health Check Route
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
+export default app;
+```
+
+---
+
+### **9. Start the Server**
+
+Configure the server to connect to the database and start listening for requests.
+
+**`src/server.ts`**
+
+```typescript
+import 'reflect-metadata';
+import { AppDataSource } from './data-source';
+import app from './app';
+import config from './utils/validateEnv';
+
+const PORT = config.port;
+
+// Initialize TypeORM connection
+AppDataSource.initialize()
+  .then(() => {
+    console.log('Database connected');
+
+    // Start server after successful DB connection
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Database connection failed:', error);
+    process.exit(1);
+  });
+```
+
+---
+
+### **10. Scripts in `package.json`**
+
+Add the following scripts to your `package.json` for development and production:
+
+```json
+"scripts": {
+  "build": "tsc",
+  "start": "node dist/server.js",
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+},
+```
+
+- **`npm run dev`**: Starts the server in development mode with automatic restarts.
+- **`npm run build`**: Compiles TypeScript to JavaScript.
+- **`npm start`**: Starts the compiled JavaScript server.
+
+---
+
+### **11. Running the Backend**
+
+#### **a. Set Up MySQL Database**
+
+1. **Install MySQL**: If you haven't installed MySQL, download and install it from the [official website](https://www.mysql.com/downloads/).
+
+2. **Create Database**:
+
+   ```sql
+   CREATE DATABASE your_database_name;
+   ```
+
+   Replace `your_database_name` with the name you specified in your `.env` file.
+
+3. **Create User (Optional)**:
+
+   ```sql
+   CREATE USER 'your_mysql_username'@'localhost' IDENTIFIED BY 'your_mysql_password';
+   GRANT ALL PRIVILEGES ON your_database_name.* TO 'your_mysql_username'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+#### **b. Start the Backend Server**
+
+Ensure MySQL is running and accessible with the credentials provided in your `.env` file.
+
+Start the backend server in development mode:
+
+```bash
+npm run dev
+```
+
+**Expected Output:**
+
+```
+Database connected
+Server running on port 5000
+```
+
+---
+
+### **12. API Endpoints Summary**
+
+1. **Signup**
+
+   - **URL:** `POST /api/signup`
+   - **Body:**
+
+     ```json
+     {
+       "firstName": "John",
+       "lastName": "Doe",
+       "email": "john.doe@example.com",
+       "password": "password123"
+     }
+     ```
+
+   - **Responses:**
+     - `201 Created`: User registered successfully.
+     - `400 Bad Request`: Email already exists.
+     - `500 Internal Server Error`: Server error.
+
+2. **Login**
+
+   - **URL:** `POST /api/login`
+   - **Body:**
+
+     ```json
+     {
+       "email": "john.doe@example.com",
+       "password": "password123"
+     }
+     ```
+
+   - **Responses:**
+     - `200 OK`: Returns JWT token.
+
+       ```json
+       {
+         "token": "your_jwt_token"
+       }
+       ```
+
+     - `400 Bad Request`: Invalid credentials.
+     - `500 Internal Server Error`: Server error.
+
+3. **Get Profile**
+
+   - **URL:** `GET /api/profile`
+   - **Headers:**
+
+     ```
+     Authorization: Bearer your_jwt_token
+     ```
+
+   - **Responses:**
+     - `200 OK`: Returns user profile.
+
+       ```json
+       {
+         "firstName": "John",
+         "lastName": "Doe",
+         "email": "john.doe@example.com",
+         "dateOfBirth": "1990-01-01",
+         "gender": "male",
+         "phoneNumber": "1234567890"
+       }
+       ```
+
+     - `401 Unauthorized`: No token or invalid token.
+     - `500 Internal Server Error`: Server error.
+
+4. **Update Profile**
+
+   - **URL:** `PUT /api/profile`
+   - **Headers:**
+
+     ```
+     Authorization: Bearer your_jwt_token
+     ```
+
+   - **Body:** (Any fields to update)
+
+     ```json
+     {
+       "firstName": "Jane",
+       "lastName": "Doe",
+       "email": "jane.doe@example.com",
+       "dateOfBirth": "1991-02-02",
+       "gender": "female",
+       "phoneNumber": "0987654321"
+     }
+     ```
+
+   - **Responses:**
+     - `200 OK`: Profile updated successfully.
+     - `400 Bad Request`: Email already exists or validation error.
+     - `401 Unauthorized`: No token or invalid token.
+     - `500 Internal Server Error`: Server error.
+
+---
+
+### **13. CORS Configuration**
+
+By default, CORS is enabled for all origins in `app.ts` with `app.use(cors())`. If you want to restrict it to specific origins (e.g., your frontend URL), modify the CORS middleware:
+
+**Example: Restricting to `http://localhost:3000`**
+
+```typescript
+import cors from 'cors';
+
+const app = express();
+
+const corsOptions = {
+  origin: 'http://localhost:3000', // Replace with your frontend URL
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+```
+
+---
+
+### **14. Testing the API**
+
+You can use tools like **Postman**, **Insomnia**, or **cURL** to test the API endpoints.
+
+**Example Workflow:**
+
+1. **Signup:**
+
+   - **Request:** `POST /api/signup`
+   - **Body:**
+
+     ```json
+     {
+       "firstName": "John",
+       "lastName": "Doe",
+       "email": "john.doe@example.com",
+       "password": "password123"
+     }
+     ```
+
+   - **Expected Response:** `201 Created` with message "User registered successfully".
+
+2. **Login:**
+
+   - **Request:** `POST /api/login`
+   - **Body:**
+
+     ```json
+     {
+       "email": "john.doe@example.com",
+       "password": "password123"
+     }
+     ```
+
+   - **Expected Response:** `200 OK` with a JWT token.
+
+3. **Get Profile:**
+
+   - **Request:** `GET /api/profile`
+   - **Headers:**
+
+     ```
+     Authorization: Bearer your_jwt_token
+     ```
+
+   - **Expected Response:** `200 OK` with user profile data.
+
+4. **Update Profile:**
+
+   - **Request:** `PUT /api/profile`
+   - **Headers:**
+
+     ```
+     Authorization: Bearer your_jwt_token
+     ```
+
+   - **Body:**
+
+     ```json
+     {
+       "firstName": "Jane",
+       "email": "jane.doe@example.com"
+     }
+     ```
+
+   - **Expected Response:** `200 OK` with message "Profile updated successfully".
+
+---
+
+### **15. Security Considerations**
+
+- **Password Security:** Passwords are hashed using `bcryptjs` before storing them in the database.
+
+- **JWT Security:** Ensure that the `JWT_SECRET` is strong and kept confidential. Tokens have an expiration time (`1h` in this case).
+
+- **Error Handling:** Avoid exposing sensitive information in error messages.
+
+- **CORS:** Restrict CORS to only allow trusted origins.
+
+- **Environment Variables:** Never commit your `.env` file to version control. Use environment variables securely, especially in production.
+
+- **Production Considerations:**
+  - **Migrations:** Use TypeORM migrations instead of `synchronize: true` to manage database schema changes.
+  - **HTTPS:** Serve your API over HTTPS to ensure encrypted data transmission.
+  - **Rate Limiting:** Implement rate limiting to protect against brute-force attacks.
+  - **Logging:** Implement proper logging for monitoring and debugging.
+  - **Input Validation:** Enhance validation to prevent SQL injection and other vulnerabilities.
+
+---
+
+### **16. Deployment Considerations**
+
+- **Environment Variables:** Ensure that environment variables are properly set in the production environment.
+
+- **Database Security:** Secure your MySQL instance, use environment variables for credentials, and consider using managed services like Amazon RDS or Azure Database for MySQL.
+
+- **Scaling:** Use load balancers and scalable infrastructure to handle increased traffic.
+
+- **Monitoring:** Implement monitoring tools to keep track of application performance and health.
+
+---
+
+### **Conclusion**
+
+By following the above steps, you have successfully transitioned your backend from **MongoDB** to **MySQL** using **TypeORM**. This setup provides a robust and type-safe environment for managing user authentication and profile management. Ensure to follow best practices for security, scalability, and maintainability as you continue to develop and deploy your application.
+
+Feel free to reach out if you have any further questions or need assistance with specific parts of the implementat
