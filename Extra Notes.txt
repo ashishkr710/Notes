@@ -280,3 +280,175 @@ const EditUser: React.FC = () => {
 };
 
 export default EditUser;
+
+
+
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import Address from '../models/Address';
+import config from '../utils/validateEnv';
+
+export const signup = async (req: Request, res: Response) => {
+  const { firstName, lastName, email, password } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+    });
+
+    const token = jwt.sign({ id: user.id }, config.jwtSecret, { expiresIn: '1h' });
+
+    res.status(201).json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid Credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid Credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id }, config.jwtSecret, { expiresIn: '1h' });
+
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const addUser = async (req: Request, res: Response) => {
+  const {
+    firstName,
+    lastName,
+    email,
+    companyAddress,
+    companyCity,
+    companyState,
+    companyZip,
+    homeAddress,
+    homeCity,
+    homeState,
+    homeZip,
+  } = req.body;
+
+  try {
+    const profilePhoto = req.file && req.file.fieldname === 'profilePhoto' ? req.file.path : null;
+    const appointmentLetter = req.file && req.file.fieldname === 'appointmentLetter' ? req.file.path : null;
+
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      profilePic: profilePhoto,
+      appointmentLetter: appointmentLetter,
+    });
+
+    await Address.create({
+      userId: user.id,
+      companyAddress,
+      companyCity,
+      companyState,
+      companyZip,
+      homeAddress,
+      homeCity,
+      homeState,
+      homeZip,
+    });
+
+    res.status(201).json({ message: 'User added successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding user' });
+  }
+};
+
+export const viewUser = async (req: Request, res: Response) => {
+  try {
+    const users = await User.findAll({
+      include: [{
+        model: Address,
+        as: 'address',
+      }],
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+};
+
+export const editUser = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  const {
+    firstName,
+    lastName,
+    email,
+    companyAddress,
+    companyCity,
+    companyState,
+    companyZip,
+    homeAddress,
+    homeCity,
+    homeState,
+    homeZip,
+  } = req.body;
+
+  try {
+    const user = await User.findByPk(userId);
+    const address = await Address.findOne({ where: { userId } });
+
+    if (!user || !address) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.email = email;
+
+    if (req.files) {
+      if (req.files['profilePhoto']) {
+        user.profilePic = (req.files['profilePhoto'] as Express.Multer.File[])[0].path;
+      }
+      if (req.files['appointmentLetter']) {
+        user.appointmentLetter = (req.files['appointmentLetter'] as Express.Multer.File[])[0].path;
+      }
+    }
+
+    await user.save();
+
+    address.companyAddress = companyAddress;
+    address.companyCity = companyCity;
+    address.companyState = companyState;
+    address.companyZip = companyZip;
+    address.homeAddress = homeAddress;
+    address.homeCity = homeCity;
+    address.homeState = homeState;
+    address.homeZip = homeZip;
+
+    await address.save();
+
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user' });
+  }
+};
