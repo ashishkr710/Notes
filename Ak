@@ -1,93 +1,46 @@
-// src/models/address.ts
+// src/middleware/upload.ts
 
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
-import User from './user';
+import multer from 'multer';
+import path from 'path';
 
-interface AddressAttributes {
-  id: number;
-  userId: number;
-  addressType: 'company' | 'home';
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-interface AddressCreationAttributes extends Optional<AddressAttributes, 'id'> {}
-
-class Address extends Model<AddressAttributes, AddressCreationAttributes> implements AddressAttributes {
-  public id!: number;
-  public userId!: number;
-  public addressType!: 'company' | 'home';
-  public address!: string;
-  public city!: string;
-  public state!: string;
-  public zip!: string;
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-
-  // Associations
-  public readonly user?: User;
-}
-
-Address.init(
-  {
-    id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    userId: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      references: {
-        model: 'users', // name of Target model
-        key: 'id', // key in Target model
-      },
-      onDelete: 'CASCADE',
-    },
-    addressType: {
-      type: DataTypes.ENUM('company', 'home'),
-      allowNull: false,
-    },
-    address: {
-      type: new DataTypes.STRING(255),
-      allowNull: false,
-    },
-    city: {
-      type: new DataTypes.STRING(100),
-      allowNull: false,
-    },
-    state: {
-      type: new DataTypes.STRING(100),
-      allowNull: false,
-    },
-    zip: {
-      type: new DataTypes.STRING(6),
-      allowNull: false,
-      validate: {
-        len: {
-          args: [6, 6],
-          msg: 'ZIP code must be exactly 6 digits',
-        },
-        isNumeric: {
-          msg: 'ZIP code must contain only numbers',
-        },
-      },
-    },
+// Storage configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (file.fieldname === 'profilePic') {
+      cb(null, 'uploads/profilePhotos/');
+    } else if (file.fieldname === 'appointmentLetter') {
+      cb(null, 'uploads/appointmentLetters/');
+    } else {
+      cb(null, 'uploads/others/');
+    }
   },
-  {
-    tableName: 'addresses',
-    sequelize, // passing the `sequelize` instance is required
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+// File filter to accept only specific file types
+const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.fieldname === 'profilePic') {
+    // Accept images only
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed for profile pictures'), false);
+    }
+  } else if (file.fieldname === 'appointmentLetter') {
+    // Accept PDFs only
+    if (file.mimetype !== 'application/pdf') {
+      return cb(new Error('Only PDF files are allowed for appointment letters'), false);
+    }
   }
-);
+  cb(null, true);
+};
 
-// Define associations
-User.hasMany(Address, { foreignKey: 'userId', as: 'addresses' });
-Address.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+// Initialize multer
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+});
 
-export default Address;
+export default upload;
