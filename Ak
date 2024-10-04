@@ -1,82 +1,93 @@
+// src/models/address.ts
+
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
+import User from './user';
 
-// Define the attributes for the User model
-interface UserAttributes {
+interface AddressAttributes {
   id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  dateOfBirth?: Date;
-  gender?: 'male' | 'female';
-  phoneNumber?: string;
+  userId: number;
+  addressType: 'company' | 'home';
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-// Some attributes are optional when creating a new User
-interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
+interface AddressCreationAttributes extends Optional<AddressAttributes, 'id'> {}
 
-class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+class Address extends Model<AddressAttributes, AddressCreationAttributes> implements AddressAttributes {
   public id!: number;
-  public firstName!: string;
-  public lastName!: string;
-  public email!: string;
-  public password!: string;
-  public dateOfBirth?: Date;
-  public gender?: 'male' | 'female';
-  public phoneNumber?: string;
+  public userId!: number;
+  public addressType!: 'company' | 'home';
+  public address!: string;
+  public city!: string;
+  public state!: string;
+  public zip!: string;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+
+  // Associations
+  public readonly user?: User;
 }
 
-User.init(
+Address.init(
   {
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
     },
-    firstName: {
-      type: new DataTypes.STRING(100),
+    userId: {
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
-    },
-    lastName: {
-      type: new DataTypes.STRING(100),
-      allowNull: false,
-    },
-    email: {
-      type: new DataTypes.STRING(255),
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: { msg: 'Must be a valid email address' },
+      references: {
+        model: 'users', // name of Target model
+        key: 'id', // key in Target model
       },
+      onDelete: 'CASCADE',
     },
-    password: {
+    addressType: {
+      type: DataTypes.ENUM('company', 'home'),
+      allowNull: false,
+    },
+    address: {
       type: new DataTypes.STRING(255),
       allowNull: false,
     },
-    dateOfBirth: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+    city: {
+      type: new DataTypes.STRING(100),
+      allowNull: false,
     },
-    gender: {
-      type: DataTypes.ENUM('male', 'female'),
-      allowNull: true,
+    state: {
+      type: new DataTypes.STRING(100),
+      allowNull: false,
     },
-    phoneNumber: {
-      type: new DataTypes.STRING(20),
-      allowNull: true,
+    zip: {
+      type: new DataTypes.STRING(6),
+      allowNull: false,
+      validate: {
+        len: {
+          args: [6, 6],
+          msg: 'ZIP code must be exactly 6 digits',
+        },
+        isNumeric: {
+          msg: 'ZIP code must contain only numbers',
+        },
+      },
     },
   },
   {
-    tableName: 'users',
+    tableName: 'addresses',
     sequelize, // passing the `sequelize` instance is required
   }
 );
 
-export default User;
+// Define associations
+User.hasMany(Address, { foreignKey: 'userId', as: 'addresses' });
+Address.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+export default Address;
