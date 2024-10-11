@@ -1,1 +1,749 @@
-https://chatgpt.com/share/66ffd373-4b98-8008-afd8-5838c17beab9
+Certainly! Let's break down your weekly assignment into manageable sections, focusing on both the backend and frontend implementations to achieve the required features. We'll use **React with TypeScript** for the frontend and **Node.js with Express** for the backend, along with **MySQL** and **Sequelize** for the database.
+
+---
+
+## Table of Contents
+
+1. [Project Setup](#project-setup)
+2. [Database Configuration](#database-configuration)
+3. [Backend Development](#backend-development)
+    - [Dependencies Installation](#dependencies-installation)
+    - [Sequelize Model](#sequelize-model)
+    - [Express Server Setup](#express-server-setup)
+    - [File Upload with Multer](#file-upload-with-multer)
+    - [Email Service with Nodemailer](#email-service-with-nodemailer)
+    - [User Registration Route](#user-registration-route)
+    - [Authentication and Authorization](#authentication-and-authorization)
+    - [Fetching Associated Data](#fetching-associated-data)
+4. [Frontend Development](#frontend-development)
+    - [Dependencies Installation](#frontend-dependencies-installation)
+    - [Folder Structure](#folder-structure)
+    - [Registration Form with Formik](#registration-form-with-formik)
+    - [Handling Dynamic Fields](#handling-dynamic-fields)
+    - [File Uploads](#file-uploads)
+    - [Submitting the Form](#submitting-the-form)
+    - [Login and Dashboard](#login-and-dashboard)
+5. [Styling with Bootstrap](#styling-with-bootstrap)
+6. [Running the Application](#running-the-application)
+7. [Conclusion](#conclusion)
+
+---
+
+## Project Setup
+
+### 1. Initialize Backend and Frontend Projects
+
+- **Backend**: Create a folder named `backend`.
+- **Frontend**: Create a folder named `frontend`.
+
+### 2. Directory Structure
+
+```
+project-root/
+├── backend/
+└── frontend/
+```
+
+---
+
+## Database Configuration
+
+We'll use **MySQL** as the database and **Sequelize** as the ORM.
+
+### 1. Install MySQL and Create Database
+
+Ensure MySQL is installed on your machine. Create a database named `job_agency_db`:
+
+```sql
+CREATE DATABASE job_agency_db;
+```
+
+### 2. Database Schema
+
+Create a single table named `Users` with the following structure:
+
+```sql
+CREATE TABLE Users (
+    UserID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(100) NOT NULL,
+    LastName VARCHAR(100) NOT NULL,
+    Email VARCHAR(255) NOT NULL UNIQUE,
+    Password VARCHAR(255) NOT NULL,
+    PhoneNumber VARCHAR(10) NOT NULL,
+    Gender VARCHAR(10) NOT NULL,
+    UserType TINYINT NOT NULL,
+    ResumePath VARCHAR(255),
+    ProfilePicturePath VARCHAR(255),
+    AgencyName VARCHAR(255),
+    IsFirstLogin BOOLEAN DEFAULT TRUE,
+    Hobbies VARCHAR(255),
+    AssociatedAgencyID INT,
+    FOREIGN KEY (AssociatedAgencyID) REFERENCES Users(UserID) ON DELETE SET NULL
+);
+```
+
+---
+
+## Backend Development
+
+### Dependencies Installation
+
+Navigate to the `backend` directory and initialize a Node.js project:
+
+```bash
+cd backend
+npm init -y
+```
+
+Install the necessary dependencies:
+
+```bash
+npm install express sequelize mysql2 bcryptjs jsonwebtoken multer nodemailer joi dotenv cors
+npm install --save-dev typescript @types/express @types/node @types/bcryptjs @types/jsonwebtoken @types/multer @types/nodemailer ts-node-dev
+```
+
+Initialize TypeScript:
+
+```bash
+npx tsc --init
+```
+
+Update `tsconfig.json` as needed. Ensure the following settings are set for Node.js:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+### Project Structure
+
+```
+backend/
+├── src/
+│   ├── config/
+│   │   └── config.ts
+│   ├── controllers/
+│   │   └── authController.ts
+│   ├── middlewares/
+│   │   ├── authMiddleware.ts
+│   │   └── uploadMiddleware.ts
+│   ├── models/
+│   │   └── User.ts
+│   ├── routes/
+│   │   └── authRoutes.ts
+│   ├── services/
+│   │   └── emailService.ts
+│   ├── utils/
+│   │   └── generatePassword.ts
+│   ├── validations/
+│   │   └── userValidation.ts
+│   ├── sequelize.ts
+│   └── server.ts
+├── .env
+├── package.json
+├── tsconfig.json
+```
+
+### Sequelize Model
+
+**backend/src/models/User.ts**
+
+```typescript
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../sequelize';
+
+interface UserAttributes {
+    UserID: number;
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    Password: string;
+    PhoneNumber: string;
+    Gender: string;
+    UserType: number;
+    ResumePath?: string;
+    ProfilePicturePath?: string;
+    AgencyName?: string;
+    IsFirstLogin: boolean;
+    Hobbies?: string;
+    AssociatedAgencyID?: number | null;
+}
+
+interface UserCreationAttributes extends Optional<UserAttributes, 'UserID' | 'ResumePath' | 'ProfilePicturePath' | 'AgencyName' | 'Hobbies' | 'AssociatedAgencyID'> {}
+
+class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+    public UserID!: number;
+    public FirstName!: string;
+    public LastName!: string;
+    public Email!: string;
+    public Password!: string;
+    public PhoneNumber!: string;
+    public Gender!: string;
+    public UserType!: number;
+    public ResumePath?: string;
+    public ProfilePicturePath?: string;
+    public AgencyName?: string;
+    public IsFirstLogin!: boolean;
+    public Hobbies?: string;
+    public AssociatedAgencyID?: number | null;
+
+    public readonly createdAt!: Date;
+    public readonly updatedAt!: Date;
+}
+
+User.init(
+    {
+        UserID: {
+            type: DataTypes.INTEGER.UNSIGNED,
+            autoIncrement: true,
+            primaryKey: true,
+        },
+        FirstName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+        },
+        LastName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+        },
+        Email: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+            unique: true,
+            validate: {
+                isEmail: true,
+            },
+        },
+        Password: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+        },
+        PhoneNumber: {
+            type: DataTypes.STRING(10),
+            allowNull: false,
+            validate: {
+                len: [10, 10],
+                isNumeric: true,
+            },
+        },
+        Gender: {
+            type: DataTypes.STRING(10),
+            allowNull: false,
+        },
+        UserType: {
+            type: DataTypes.TINYINT,
+            allowNull: false,
+            validate: {
+                isIn: [[1, 2]], // 1 = Job Seeker, 2 = Agency
+            },
+        },
+        ResumePath: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        ProfilePicturePath: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        AgencyName: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        IsFirstLogin: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true,
+        },
+        Hobbies: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        AssociatedAgencyID: {
+            type: DataTypes.INTEGER.UNSIGNED,
+            allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'UserID',
+            },
+        },
+    },
+    {
+        sequelize,
+        tableName: 'Users',
+    }
+);
+
+export default User;
+```
+
+### Sequelize Initialization
+
+**backend/src/sequelize.ts**
+
+```typescript
+import { Sequelize } from 'sequelize';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const sequelize = new Sequelize(
+    process.env.DB_NAME as string,
+    process.env.DB_USER as string,
+    process.env.DB_PASSWORD,
+    {
+        host: process.env.DB_HOST,
+        dialect: 'mysql',
+        logging: false,
+    }
+);
+
+export default sequelize;
+```
+
+### Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
+```
+PORT=5000
+DB_HOST=localhost
+DB_NAME=job_agency_db
+DB_USER=root
+DB_PASSWORD=yourpassword
+JWT_SECRET=your_jwt_secret
+EMAIL_USER=youremail@example.com
+EMAIL_PASS=your_email_password
+```
+
+### Express Server Setup
+
+**backend/src/server.ts**
+
+```typescript
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import sequelize from './sequelize';
+import authRoutes from './routes/authRoutes';
+
+dotenv.config();
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads')); // Serve uploaded files
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+// Test Route
+app.get('/', (req, res) => {
+    res.send('API is running');
+});
+
+// Sync Database and Start Server
+const PORT = process.env.PORT || 5000;
+
+sequelize.sync({ alter: true }).then(() => {
+    console.log('Database synced');
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}).catch((error) => {
+    console.error('Unable to connect to the database:', error);
+});
+```
+
+### File Upload with Multer
+
+**backend/src/middlewares/uploadMiddleware.ts**
+
+```typescript
+import multer, { FileFilterCallback } from 'multer';
+import path from 'path';
+import { Request } from 'express';
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        if (file.fieldname === 'profileImage') {
+            cb(null, 'uploads/profileImages/');
+        } else if (file.fieldname === 'resume') {
+            cb(null, 'uploads/resumes/');
+        } else {
+            cb(null, 'uploads/others/');
+        }
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    if (file.fieldname === 'profileImage') {
+        if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PNG and JPEG images are allowed for profile images'));
+        }
+    } else if (file.fieldname === 'resume') {
+        if (file.mimetype === 'application/pdf' || file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF and DOCX files are allowed for resumes'));
+        }
+    } else {
+        cb(new Error('Invalid file type'));
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB
+    },
+});
+
+export default upload;
+```
+
+### Email Service with Nodemailer
+
+**backend/src/services/emailService.ts**
+
+```typescript
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail', // You can use other services
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+export const sendWelcomeEmail = async (to: string, password: string) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: 'Welcome to Job Agency Platform',
+        text: `Welcome! Your account has been created. Your password is: ${password}. Please log in and change your password.`,
+    };
+
+    await transporter.sendMail(mailOptions);
+};
+```
+
+> **Note:** If using Gmail, you might need to enable "Less secure app access" or use an App Password.
+
+### Utility to Generate Password
+
+**backend/src/utils/generatePassword.ts**
+
+```typescript
+export const generatePassword = (length: number = 8): string => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let password = '';
+    for(let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+};
+```
+
+### Validation with Joi
+
+**backend/src/validations/userValidation.ts**
+
+```typescript
+import Joi from 'joi';
+
+export const registerValidation = Joi.object({
+    firstName: Joi.string().max(100).required(),
+    lastName: Joi.string().max(100).required(),
+    email: Joi.string().email().required(),
+    phoneNumber: Joi.string().length(10).pattern(/^[0-9]+$/).required(),
+    gender: Joi.string().valid('Male', 'Female', 'Other').required(),
+    userType: Joi.number().valid(1, 2).required(), // 1 = Job Seeker, 2 = Agency
+    hobbies: Joi.array().items(Joi.string().valid('Sports', 'Dance', 'Reading', 'Singing')).required(),
+    // profileImage and resume will be handled by Multer
+    associatedAgencyID: Joi.when('userType', {
+        is: 1,
+        then: Joi.number().integer().required(),
+        otherwise: Joi.forbidden(),
+    }),
+});
+```
+
+### User Registration Controller
+
+**backend/src/controllers/authController.ts**
+
+```typescript
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import User from '../models/User';
+import { generatePassword } from '../utils/generatePassword';
+import { sendWelcomeEmail } from '../services/emailService';
+import { registerValidation } from '../validations/userValidation';
+
+export const register = async (req: Request, res: Response) => {
+    try {
+        // Validate input
+        const { error } = registerValidation.validate(req.body);
+        if (error) {
+            return res.status(400).json({ message: error.details[0].message });
+        }
+
+        const { firstName, lastName, email, phoneNumber, gender, userType, hobbies, associatedAgencyID } = req.body;
+
+        // Check if email already exists
+        const existingUser = await User.findOne({ where: { Email: email } });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already exists' });
+        }
+
+        // Handle file uploads
+        let profileImagePath = null;
+        let resumePath = null;
+        if (req.files) {
+            const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+            if (files['profileImage']) {
+                profileImagePath = files['profileImage'][0].path;
+            }
+            if (files['resume']) {
+                resumePath = files['resume'][0].path;
+            }
+        }
+
+        // Generate password and hash it
+        const password = generatePassword(10);
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create user
+        const newUser = await User.create({
+            FirstName: firstName,
+            LastName: lastName,
+            Email: email,
+            Password: hashedPassword,
+            PhoneNumber: phoneNumber,
+            Gender: gender,
+            UserType: userType,
+            Hobbies: hobbies.join(', '),
+            ProfilePicturePath: profileImagePath,
+            ResumePath: resumePath,
+            AssociatedAgencyID: userType === 1 ? associatedAgencyID : null,
+        });
+
+        // Send welcome email
+        await sendWelcomeEmail(email, password);
+
+        return res.status(201).json({ message: 'User registered successfully' });
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+```
+
+### Authentication Routes
+
+**backend/src/routes/authRoutes.ts**
+
+```typescript
+import express from 'express';
+import { register } from '../controllers/authController';
+import upload from '../middlewares/uploadMiddleware';
+
+const router = express.Router();
+
+// Register Route
+router.post('/register', upload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'resume', maxCount: 1 },
+]), register);
+
+export default router;
+```
+
+> **Note:** For simplicity, only the registration route is shown here. You can similarly add login and other routes.
+
+### Authentication and Authorization
+
+Implementing full authentication (login, JWT, protected routes) is essential but beyond the immediate scope. However, here’s a brief overview:
+
+1. **Login Route**: Verify user credentials, generate JWT.
+2. **Auth Middleware**: Verify JWT for protected routes.
+3. **Role-Based Access**: Check `UserType` in JWT payload.
+
+You can expand the backend with these features as needed.
+
+### Fetching Associated Data
+
+**For Agencies**: Fetch all Job Seekers associated with the agency.
+**For Job Seekers**: Fetch the agency details they selected.
+
+Implement routes accordingly.
+
+**backend/src/controllers/userController.ts**
+
+```typescript
+import { Request, Response } from 'express';
+import User from '../models/User';
+
+export const getAssociatedData = async (req: Request, res: Response) => {
+    try {
+        const user = await User.findByPk(req.user.UserID);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.UserType === 2) { // Agency
+            const jobSeekers = await User.findAll({
+                where: { AssociatedAgencyID: user.UserID },
+                attributes: ['UserID', 'FirstName', 'LastName', 'Email', 'PhoneNumber', 'ResumePath'],
+            });
+            return res.json({ jobSeekers });
+        } else if (user.UserType === 1) { // Job Seeker
+            if (user.AssociatedAgencyID) {
+                const agency = await User.findByPk(user.AssociatedAgencyID, {
+                    attributes: ['UserID', 'FirstName', 'LastName', 'Email', 'PhoneNumber', 'AgencyName'],
+                });
+                return res.json({ agency });
+            } else {
+                return res.json({ agency: null });
+            }
+        } else {
+            return res.status(400).json({ message: 'Invalid user type' });
+        }
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+```
+
+**backend/src/routes/userRoutes.ts**
+
+```typescript
+import express from 'express';
+import { getAssociatedData } from '../controllers/userController';
+import { authenticate } from '../middlewares/authMiddleware';
+
+const router = express.Router();
+
+// Protected Route
+router.get('/associated', authenticate, getAssociatedData);
+
+export default router;
+```
+
+> **Note:** The `authenticate` middleware should verify the JWT and attach the user to `req.user`.
+
+---
+
+## Frontend Development
+
+### Dependencies Installation
+
+Navigate to the `frontend` directory and initialize a React project with TypeScript:
+
+```bash
+cd frontend
+npx create-react-app . --template typescript
+```
+
+Install necessary dependencies:
+
+```bash
+npm install axios react-router-dom formik yup react-bootstrap bootstrap
+npm install @types/react-router-dom
+```
+
+### Folder Structure
+
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── RegistrationForm.tsx
+│   │   ├── LoginForm.tsx
+│   │   ├── Dashboard.tsx
+│   │   └── ...other components
+│   ├── hooks/
+│   │   └── useAuth.ts
+│   ├── pages/
+│   │   ├── Register.tsx
+│   │   ├── Login.tsx
+│   │   ├── Dashboard.tsx
+│   │   └── ...other pages
+│   ├── services/
+│   │   └── api.ts
+│   ├── App.tsx
+│   ├── index.tsx
+│   └── ...other files
+```
+
+### Setup Bootstrap
+
+In `index.tsx`, import Bootstrap CSS:
+
+```typescript
+import 'bootstrap/dist/css/bootstrap.min.css';
+```
+
+### API Service with Axios
+
+**frontend/src/services/api.ts**
+
+```typescript
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
+
+const api = axios.create({
+    baseURL: API_URL,
+});
+
+export const registerUser = (formData: FormData) => {
+    return api.post('/auth/register', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+};
+
+// Add more API methods as needed (login, fetch data, etc.)
+
+export default api;
+```
+
+### Registration Form with Formik
+
+**frontend/src/components/RegistrationForm.tsx**
+
+```tsx
+import React, { useState, useEffect } from 'react';
+import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
+import * as Yup from 'yup';
+import { registerUser } from '../services/api';
+import {
+
+
+https://chatgpt.com/share/6708a387-083c-8008-9af2-05871d3530e2
