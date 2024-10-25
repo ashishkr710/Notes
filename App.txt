@@ -1,0 +1,253 @@
+Below is a simplified version of the **Retailer Registration and Product Management** web application in **React.ts**, **Node.ts**, and **MySQL** with **Sequelize**, **Formik** for validation, **React Query**, and **Multer** for file uploads.
+
+### **Frontend (React.ts)**
+
+#### 1. **Retailer Registration Form**
+
+```tsx
+import React from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { useRegisterRetailer } from './hooks/useRegisterRetailer';
+
+const RetailerRegistration = () => {
+  const { mutate: registerRetailer } = useRegisterRetailer();
+
+  const formik = useFormik({
+    initialValues: {
+      firstName: '',
+      lastName: '',
+      companyName: '',
+      email: '',
+      phone: '',
+      address: '',
+      companyLogo: null,
+      profileImage: null,
+    },
+    validationSchema: Yup.object({
+      firstName: Yup.string().required('Required'),
+      lastName: Yup.string().required('Required'),
+      companyName: Yup.string().required('Required'),
+      email: Yup.string().email('Invalid email format').required('Required'),
+      phone: Yup.string()
+        .matches(/^[0-9]{10}$/, 'Must be 10 digits')
+        .required('Required'),
+      address: Yup.string().required('Required'),
+      companyLogo: Yup.mixed()
+        .test('fileType', 'PNG/JPEG only', (value) => {
+          return value && ['image/png', 'image/jpeg'].includes(value.type);
+        })
+        .required('Company logo is required'),
+      profileImage: Yup.mixed()
+        .test('fileType', 'PNG/JPEG only', (value) => {
+          return value && ['image/png', 'image/jpeg'].includes(value.type);
+        })
+        .required('Profile image is required'),
+    }),
+    onSubmit: (values) => {
+      const formData = new FormData();
+      formData.append('firstName', values.firstName);
+      formData.append('lastName', values.lastName);
+      formData.append('companyName', values.companyName);
+      formData.append('email', values.email);
+      formData.append('phone', values.phone);
+      formData.append('address', values.address);
+      formData.append('companyLogo', values.companyLogo);
+      formData.append('profileImage', values.profileImage);
+
+      registerRetailer(formData);
+    },
+  });
+
+  return (
+    <form onSubmit={formik.handleSubmit} encType="multipart/form-data">
+      <input
+        type="text"
+        name="firstName"
+        placeholder="First Name"
+        onChange={formik.handleChange}
+        value={formik.values.firstName}
+      />
+      {formik.errors.firstName && <div>{formik.errors.firstName}</div>}
+      
+      {/* Similar fields for Last Name, Company Name, etc. */}
+      
+      <input
+        type="file"
+        name="companyLogo"
+        onChange={(event) =>
+          formik.setFieldValue('companyLogo', event.currentTarget.files[0])
+        }
+      />
+      {formik.errors.companyLogo && <div>{formik.errors.companyLogo}</div>}
+      
+      <input
+        type="file"
+        name="profileImage"
+        onChange={(event) =>
+          formik.setFieldValue('profileImage', event.currentTarget.files[0])
+        }
+      />
+      {formik.errors.profileImage && <div>{formik.errors.profileImage}</div>}
+
+      <button type="submit">Register Retailer</button>
+    </form>
+  );
+};
+
+export default RetailerRegistration;
+```
+
+#### 2. **Product Listing with Pagination and Search**
+
+```tsx
+import React, { useState } from 'react';
+import { useFetchProducts } from './hooks/useFetchProducts';
+
+const ProductList = () => {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useFetchProducts({ search, page, pageSize: 5 });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <>
+      <input
+        type="text"
+        placeholder="Search products..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <ul>
+        {data.products.map((product) => (
+          <li key={product.id}>
+            {product.name} - {product.quantity} - {product.price}
+          </li>
+        ))}
+      </ul>
+
+      {/* Pagination */}
+      <button onClick={() => setPage((prev) => prev - 1)} disabled={page === 1}>
+        Previous
+      </button>
+      <button onClick={() => setPage((prev) => prev + 1)} disabled={data.products.length < 5}>
+        Next
+      </button>
+    </>
+  );
+};
+
+export default ProductList;
+```
+
+### **Backend (Node.ts)**
+
+#### 1. **Register Retailer API**
+
+```ts
+import express from 'express';
+import multer from 'multer';
+import { registerRetailer } from './controllers/retailerController';
+
+const router = express.Router();
+const upload = multer({ dest: 'uploads/' }); // Storing in 'uploads' directory
+
+router.post('/retailer/register', upload.fields([
+  { name: 'companyLogo', maxCount: 1 },
+  { name: 'profileImage', maxCount: 1 }
+]), registerRetailer);
+
+export default router;
+```
+
+#### 2. **Retailer Controller**
+
+```ts
+import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
+import { Retailer } from '../models/Retailer';
+import { sendEmailWithPassword } from '../utils/sendEmail';
+
+export const registerRetailer = async (req: Request, res: Response) => {
+  try {
+    const { firstName, lastName, companyName, email, phone, address } = req.body;
+    const companyLogo = req.files['companyLogo'][0].path;
+    const profileImage = req.files['profileImage'][0].path;
+
+    const password = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const retailer = await Retailer.create({
+      firstName, lastName, companyName, email, phone, address, companyLogo, profileImage, password: hashedPassword
+    });
+
+    // Send email with password
+    await sendEmailWithPassword(email, password);
+
+    res.status(201).json({ message: 'Retailer registered successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error registering retailer' });
+  }
+};
+```
+
+#### 3. **Product Controller**
+
+```ts
+import { Request, Response } from 'express';
+import { Product } from '../models/Product';
+
+export const getProducts = async (req: Request, res: Response) => {
+  const { search = '', page = 1, pageSize = 5 } = req.query;
+  const offset = (Number(page) - 1) * Number(pageSize);
+
+  const products = await Product.findAll({
+    where: { name: { $like: `%${search}%` } },
+    limit: Number(pageSize),
+    offset,
+  });
+
+  res.json({ products });
+};
+```
+
+### **Database Models (Sequelize)**
+
+#### 1. **Retailer Model**
+
+```ts
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db';
+
+export const Retailer = sequelize.define('Retailer', {
+  firstName: DataTypes.STRING,
+  lastName: DataTypes.STRING,
+  companyName: DataTypes.STRING,
+  email: DataTypes.STRING,
+  phone: DataTypes.STRING,
+  address: DataTypes.STRING,
+  companyLogo: DataTypes.STRING,
+  profileImage: DataTypes.STRING,
+  password: DataTypes.STRING,
+});
+```
+
+#### 2. **Product Model**
+
+```ts
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db';
+
+export const Product = sequelize.define('Product', {
+  name: DataTypes.STRING,
+  category: DataTypes.STRING,
+  image: DataTypes.STRING,
+  quantity: DataTypes.INTEGER,
+  price: DataTypes.FLOAT,
+  status: DataTypes.STRING, // "Draft" or "Published"
+});
+```
+
+### **Conclusion**
+This is the basic implementation of the **Retailer Registration** and **Product Management** system. The main components include the registration form with image uploads, a product list with pagination and search, and relevant backend API routes for handling data and logic. You can extend it further by adding other functionalities like product editing and soft deletion.
