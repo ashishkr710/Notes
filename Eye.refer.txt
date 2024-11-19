@@ -1,0 +1,183 @@
+import React from "react";
+
+const Profile: React.FC = () => {
+  return (
+    <div className="profile-container">
+      <aside className="sidebar">
+        <h2 className="logo">EYE REFER</h2>
+        <nav>
+          <ul>
+            <li>Dashboard</li>
+            <li>Patients</li>
+            <li>Appointments</li>
+            <li>Doctors</li>
+            <li>Chat</li>
+            <li>Logout</li>
+          </ul>
+        </nav>
+      </aside>
+
+      <main className="profile-main">
+        <header className="profile-header">
+          <div>
+            <h3>Hi, John Doe</h3>
+            <span>Welcome Back</span>
+          </div>
+        </header>
+
+        <section className="profile-content">
+          <div className="profile-card">
+            <div className="profile-header">
+              <img
+                src="https://via.placeholder.com/100"
+                alt="Profile"
+                className="profile-picture"
+              />
+              <div>
+                <h3>Dr. William Marten</h3>
+                <p>Dermatologist</p>
+              </div>
+              <button className="edit-profile-button">Edit Profile</button>
+            </div>
+
+            <div className="profile-details">
+              <div>
+                <strong>Name:</strong> John Doe
+              </div>
+              <div>
+                <strong>Gender:</strong> Male
+              </div>
+              <div>
+                <strong>Specialty:</strong> Ophthalmologist
+              </div>
+              <div>
+                <strong>Phone:</strong> +1 123 456 7890
+              </div>
+              <div>
+                <strong>Email:</strong> demo.patient@test1mail.com
+              </div>
+              <div>
+                <strong>Location:</strong> Maplewood Vision Care{" "}
+                <a href="#" className="insurance-link">
+                  Insurance List
+                </a>
+              </div>
+            </div>
+
+            <div className="address-section">
+              <strong>Address Information:</strong>
+              <p>
+                5712 Carter Rest Apt. 869
+                <br />
+                Oklahoma, Chicago, USA
+                <br />
+                458726
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};
+
+export default Profile;
+
+css 
+
+.profile-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #f5f7f9;
+  padding: 20px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  margin-bottom: 15px;
+  cursor: pointer;
+}
+
+.profile-main {
+  flex: 1;
+  padding: 20px;
+  background-color: #eaf1f8;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.profile-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-right: 20px;
+}
+
+.edit-profile-button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.profile-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 30px;
+  margin-top: 20px;
+}
+
+.profile-details div {
+  flex: 1 1 200px;
+}
+
+.address-section {
+  margin-top: 20px;
+}
+
+.insurance-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
