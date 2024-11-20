@@ -1,0 +1,154 @@
+Here’s how your PPT will be structured based on your content:
+
+
+---
+
+Slide 1: Title Slide
+
+Title: LineGuide – A Comprehensive Inspection Solution
+Subtitle: Empowering Power Companies for Efficient Line and Substation Inspections
+
+
+---
+
+Slide 2: Application Objective
+
+Purpose:
+
+Used by aerial and ground-based teams for inspecting and repairing electrical transmission lines and substations.
+
+Conducts transmission line inspections, forestry inspections, and construction surveys for power companies.
+
+
+
+
+---
+
+Slide 3: Roles in the System
+
+Super Admin
+
+Admin
+
+Master Inspector
+
+
+
+---
+
+Slide 4: Feature Listing
+
+Transmission Line Inspection
+
+Forestry Inspection
+
+Security Alert
+
+User Tracking
+
+
+
+---
+
+Slide 5: How It Works
+
+1. Build Survey
+
+
+2. Line Establishment as Ground Work Starts
+
+
+3. Inspections
+
+
+4. Inspection Reports
+
+
+5. Repair and View
+
+
+
+
+---
+
+Slide 6: Third-Party APIs Used
+
+Google API
+
+AWS Services:
+
+S3
+
+CDN
+
+Secret Manager
+
+
+Apple Maps
+
+New Relic
+
+MongoDB Atlas
+
+Firebase
+
+
+
+---
+
+Slide 7: Technical Challenges
+
+1. Auto-ingestion of KML file data using Lambda functions.
+
+
+2. Time-consuming KML to JSON conversion.
+
+
+
+
+---
+
+Slide 8: Next Phase Opportunities
+
+Task-Based Application Enhancements:
+
+1. Single Sign-On (SSO) Implementation
+
+
+2. Angular 18-based UI
+
+
+3. Advanced Lambda Functions
+
+
+4. CI/CD Pipeline for Backend and Web
+
+
+5. MongoDB SaaS-based Application (NEAN Stack)
+
+
+
+
+
+---
+
+Slide 9: Compliance and Reliability
+
+Follows NERC-CIP Compliance (North American Electric Reliability Corporation) for security and reliability.
+
+
+
+---
+
+Slide 10: Conclusion
+
+LineGuide helps power companies efficiently inspect and maintain their transmission lines, poles, and substations.
+
+Supports data capture through pictures and detailed reports for effective decision-making.
+
+
+
+---
+
+Let me know if you want this content formatted as a downloadable PPT!
+
