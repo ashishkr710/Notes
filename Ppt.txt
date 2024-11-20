@@ -11,6 +11,16 @@ Subtitle: Empowering Power Companies for Efficient Line and Substation Inspectio
 
 ---
 
+Slide 2: Business Objective
+
+Improve operational efficiency in transmission line and substation inspections.
+
+Minimize downtime by providing actionable insights for repairs and maintenance.
+
+Enhance safety for field teams through user tracking and security alerts.
+
+Facilitate seamless collaboration between aerial and ground-based teams.
+
 Slide 2: Application Objective
 
 Purpose:
